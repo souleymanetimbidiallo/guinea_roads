@@ -1,71 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Firebase and Maps Demo',
-      home: ArretsPage(),
-    );
-  }
-}
 
-class ArretsPage extends StatefulWidget {
-  @override
-  _ArretsPageState createState() => _ArretsPageState();
-}
-
-class _ArretsPageState extends State<ArretsPage> {
-  final Stream<QuerySnapshot> _arretsStream = FirebaseFirestore.instance.collection('Arrets').snapshots();
+class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Liste des Arrêts'),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _arretsStream,
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) {
-            return Text('Something went wrong');
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Text("Loading");
-          }
-          return ListView(
-            children: snapshot.data!.docs.map((DocumentSnapshot document) {
-              Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
-              return ListTile(
-                title: Text(data['name']),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MapsPage()),
-                ),
-              );
-            }).toList(),
-          );
-        },
-      ),
-    );
-  }
+  _MyAppState createState() => _MyAppState();
 }
 
-class MapsPage extends StatefulWidget {
-  @override
-  _MapsPageState createState() => _MapsPageState();
-}
-
-class _MapsPageState extends State<MapsPage> {
+class _MyAppState extends State<MyApp> {
   late GoogleMapController mapController;
 
   final LatLng _center = const LatLng(9.537029, -13.678470);
@@ -121,7 +72,7 @@ class _MapsPageState extends State<MapsPage> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Text('Guinea Roads App'),
+          title: const Text('Guinea Roads App'),
           backgroundColor: Colors.green[700],
         ),
         body: GoogleMap(

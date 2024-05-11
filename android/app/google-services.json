@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "90309820211",
-    "project_id": "app-mobile-fcb1b",
-    "storage_bucket": "app-mobile-fcb1b.appspot.com"
+    "project_number": "840783553474",
+    "project_id": "ag35-guinea-roads",
+    "storage_bucket": "ag35-guinea-roads.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:90309820211:android:943fdcd3a1701b29550846",
+        "mobilesdk_app_id": "1:840783553474:android:f069fd493d3e630fc4ec5b",
         "android_client_info": {
-          "package_name": "gn.guinearoads.guinea_roads"
+          "package_name": "com.example.guinea_roads"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAG9lSIOXkNOrvn8Og2heO13eNxrk1wkXc"
+          "current_key": "AIzaSyDiVNgl0SoP6tjQCIVeuHwqkPnMriJdD2U"
         }
       ],
       "services": {
