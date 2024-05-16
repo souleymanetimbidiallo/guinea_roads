@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:firebase_core/firebase_core.dart';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const MyApp());
-}
 
 
-class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
-
+class MapsPage extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  _MapsPageState createState() => _MapsPageState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MapsPageState extends State<MapsPage> {
   late GoogleMapController mapController;
 
   final LatLng _center = const LatLng(9.537029, -13.678470);
@@ -70,11 +62,55 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Guinea Roads App'),
-          backgroundColor: Colors.green[700],
-        ),
+
+        appBar: AppBar(backgroundColor: Colors.white!.withOpacity(0.5), // Fond transparent
+            actions: [
+
+            ],
+            bottom: PreferredSize(
+              preferredSize: Size.fromHeight(175.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Départ',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    SizedBox(height: 12.0),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Destination',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    SizedBox(height: 12.0),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Action à effectuer lors du clic sur le bouton
+                      },
+
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        // Définir la couleur de fond en bleu
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0), // Arrondir les coins du bouton
+                        ),
+                      ),
+                      child: Text('Rechercher'),
+                    ),
+
+
+                  ],
+                ),
+              ),
+            )),
+
         body: GoogleMap(
           onMapCreated: _onMapCreated,
           initialCameraPosition: CameraPosition(
