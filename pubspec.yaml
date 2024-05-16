@@ -41,6 +41,7 @@ dependencies:
   json_serializable: ^6.8.0
   firebase_core: ^2.31.0
   cloud_firestore: ^4.17.3
+  flutter_polyline_points: ^2.0.0
 
 dev_dependencies:
   flutter_test:
