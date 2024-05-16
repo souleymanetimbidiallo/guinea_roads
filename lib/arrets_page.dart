@@ -1,22 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Firebase Demo',
-      home: ArretsPage(),
-    );
-  }
-}
+import 'maps_page.dart';
 
 class ArretsPage extends StatefulWidget {
   @override
@@ -31,6 +16,14 @@ class _ArretsPageState extends State<ArretsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Liste des Arrêts'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _arretsStream,
@@ -38,21 +31,28 @@ class _ArretsPageState extends State<ArretsPage> {
           if (snapshot.hasError) {
             return Text('Something went wrong');
           }
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Text("Loading");
           }
-
           return ListView(
             children: snapshot.data!.docs.map((DocumentSnapshot document) {
               Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
-              return ListTile(
-                title: Text(data['name']),
+              return Card(
+                child: ListTile(
+                  leading: Icon(Icons.directions_bus), // Ici tu peux mettre l'icône que tu souhaites
+                  title: Text(data['name']),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MapsPage()),
+                  ),
+                ),
               );
             }).toList(),
           );
+
         },
       ),
     );
   }
 }
+
