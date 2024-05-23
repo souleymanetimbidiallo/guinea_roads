@@ -20,8 +20,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   static List<Widget> _widgetOptions = <Widget>[
     MapsPage(),
-    SearchPage(),
     ArretsPage(),
+    SearchPage(),
+
   ];
 
   void _onItemTapped(int index) {
@@ -35,10 +36,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Guinea Roads App'),
-        backgroundColor: Colors.green[700],
-      ),
+
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
@@ -48,18 +46,19 @@ class _BottomNavBarState extends State<BottomNavBar> {
             icon: Icon(Icons.map),
             label: 'Carte',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Itinéraire',
-          ),
+
 
           BottomNavigationBarItem(
             icon: Icon(Icons.bus_alert),
             label: 'Arrets',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profil',
+          ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green[700],
+        selectedItemColor: Colors.blueAccent,
         onTap: _onItemTapped,
       ),
     );
