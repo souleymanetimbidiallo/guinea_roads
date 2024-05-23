@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'maps_page.dart';
+import 'views/maps_page.dart';
 
 class ArretsPage extends StatefulWidget {
   @override
