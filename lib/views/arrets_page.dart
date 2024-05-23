@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:guinea_roads/controllers/stop_controller.dart';
 import 'package:guinea_roads/views/maps_page.dart';
 class ArretsPage extends StatefulWidget {
   @override
@@ -7,10 +8,13 @@ class ArretsPage extends StatefulWidget {
 }
 
 class _ArretsPageState extends State<ArretsPage> {
-  final Stream<QuerySnapshot> _arretsStream = FirebaseFirestore.instance.collection('Arrets').snapshots();
+  ArretsController controller = ArretsController();
+
+
   TextEditingController _searchController = TextEditingController();
   List<DocumentSnapshot> _arrets = [];
   List<DocumentSnapshot> _filteredArrets = [];
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +61,7 @@ class _ArretsPageState extends State<ArretsPage> {
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _arretsStream,
+        stream: controller.recupererArrets(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Something went wrong'));

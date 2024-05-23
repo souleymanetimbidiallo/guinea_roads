@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'search_page.dart';
-import 'arrets_page.dart';
+import 'views/arrets_page.dart';
 import 'views/maps_page.dart';
 
 void main() {
