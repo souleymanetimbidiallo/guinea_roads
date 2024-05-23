@@ -16,8 +16,8 @@ class MyApp extends StatelessWidget {
 
       initialRoute: '/',
       routes: {
-        '/': (context) => LoginPage(),
-        '/bottomnav': (context) => BottomNavBar(),
+        //'/': (context) => LoginPage(),
+        '/': (context) => BottomNavBar(),
       },
 
       debugShowCheckedModeBanner: false,
