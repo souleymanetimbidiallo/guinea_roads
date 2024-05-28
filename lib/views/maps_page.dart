@@ -6,6 +6,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class MapsPage extends StatefulWidget {
+  final String? selectedDeparture;
+  MapsPage({Key? key, this.selectedDeparture}) : super(key: key);
+
   @override
   _MapsPageState createState() => _MapsPageState();
 }
@@ -24,9 +27,15 @@ class _MapsPageState extends State<MapsPage> {
   TextEditingController departController = TextEditingController();
   TextEditingController destinationController = TextEditingController();
 
+  String? selectedDeparture;
+  String? selectedDestination;
+
   @override
   void initState() {
     super.initState();
+    selectedDeparture = widget.selectedDeparture; // Utilisation du paramètre du constructeur
+    departController.text = selectedDeparture ?? '';
+    _loadMarkers();
   }
 
   Future<void> _loadMarkers() async {
@@ -36,7 +45,8 @@ class _MapsPageState extends State<MapsPage> {
         GeoPoint geoPoint = data['location']; // Récupérer le GeoPoint
         var marker = Marker(
           markerId: MarkerId(document.id),
-          position: LatLng(geoPoint.latitude, geoPoint.longitude), // Utiliser les coordonnées du GeoPoint
+          position: LatLng(geoPoint.latitude, geoPoint.longitude),
+          // Utiliser les coordonnées du GeoPoint
           infoWindow: InfoWindow(
             title: data['name'],
             snippet: 'Arrêt de bus',
@@ -59,8 +69,8 @@ class _MapsPageState extends State<MapsPage> {
     try {
       var snapshot = await FirebaseFirestore.instance.collection('Arrets')
           .orderBy('name')
-          .startAt([query])
-          .endAt([query + '\uf8ff'])
+          .startAt([query.toLowerCase()])
+          .endAt([query.toLowerCase() + '\uf8ff'])
           .get();
 
       return snapshot.docs.map((doc) => doc.data()['name'].toString()).toList();
@@ -70,56 +80,51 @@ class _MapsPageState extends State<MapsPage> {
     }
   }
 
+  Future<LatLng> _getLatLngFromStopName(String stopName) async {
+    var snapshot = await FirebaseFirestore.instance.collection('Arrets')
+        .where('name', isEqualTo: stopName)
+        .get();
 
-  getDirections() async {
-    List<LatLng> polylineCoordinates = [];
-    var troncons = 0;
-
-    var departure = LatLng(9.669334, -13.558108);
-    var arrival = LatLng(9.572402, -13.656524);
-
-
-    //addMarker(terminusList.first, 'Départ');
-    //addMarker(terminusList.last, 'Destination');
-
-
-    List<LatLng> allWaypoints = [
-      LatLng(9.669334, -13.558108), //terminusList[0].location,
-      //...terminusList.sublist(1, terminusList.length - 1).map((terminus) => terminus.location),  // Waypoints intermédiaires
-      LatLng(9.680500, -13.579675),
-      LatLng(9.639360, -13.615796),
-      LatLng(9.611226, -13.645598),
-      LatLng(9.572402, -13.656524)//terminusList[terminusList.length - 1].location  // Position d'arrivée
-    ];
-
-
-    // fetch the route between each pair of adjacent waypoints
-    for (int i = 0; i < allWaypoints.length - 1; i++) {
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleAPiKey,
-        PointLatLng(allWaypoints[i].latitude, allWaypoints[i].longitude),
-        PointLatLng(
-            allWaypoints[i + 1].latitude, allWaypoints[i + 1].longitude),
-        travelMode: TravelMode.driving,
-      );
-
-      if (result.points.isNotEmpty) {
-        result.points.forEach((PointLatLng point) {
-          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-        });
-      } else {
-        print(result.errorMessage);
-      }
+    if (snapshot.docs.isNotEmpty) {
+      var data = snapshot.docs.first.data() as Map<String, dynamic>;
+      GeoPoint geoPoint = data['location'];
+      return LatLng(geoPoint.latitude, geoPoint.longitude);
+    } else {
+      throw Exception('Arrêt non trouvé');
     }
-    /*for (int i = 1; i < terminusList.length - 1; i++) {
-      // add a marker for the current waypoint
-      addMarker(terminusList[i], 'Point');
-    }*/
-    troncons = markers.length - 2;
-
-    _loadMarkers();
-    addPolyLine(polylineCoordinates);
   }
+
+  void getDirections() async {
+    if (selectedDeparture == null || selectedDestination == null) {
+      print('Veuillez sélectionner à la fois un départ et une destination.');
+      return;
+    }
+
+    try {
+      final LatLng departure = await _getLatLngFromStopName(selectedDeparture!);
+      final LatLng arrival = await _getLatLngFromStopName(selectedDestination!);
+
+      final List<LatLng> polylineCoordinates = [];
+
+    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+      googleAPiKey,
+      PointLatLng(departure.latitude, departure.longitude),
+      PointLatLng(arrival.latitude, arrival.longitude),
+      travelMode: TravelMode.driving,
+    );
+
+    if (result.points.isNotEmpty) {
+      result.points.forEach((PointLatLng point) {
+        polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+      });
+      addPolyLine(polylineCoordinates);
+    } else {
+      print(result.errorMessage);
+    }
+  } catch(e){
+  print('Erreur lors de la récupération des coordonnées: $e');
+  }
+}
 
   addPolyLine(List<LatLng> polylineCoordinates) {
     PolylineId id = PolylineId("poly");
@@ -151,6 +156,23 @@ class _MapsPageState extends State<MapsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Card(
+                      margin: EdgeInsets.symmetric(vertical: 8.0),
+                      elevation: 4.0,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildTransportOption(Icons.local_taxi, 'Taxi'),
+                            _buildTransportOption(Icons.directions_car, 'Voiture'),
+                            _buildTransportOption(Icons.directions_bus, 'Minibus'),
+                            _buildTransportOption(Icons.motorcycle, 'Moto'),
+                            _buildTransportOption(Icons.electric_rickshaw, 'Tricycle'),
+                          ],
+                        ),
+                      ),
+                    ),
                 Autocomplete<String>(
                   optionsBuilder: (TextEditingValue textEditingValue) {
                 if (textEditingValue.text.isEmpty) {
@@ -168,6 +190,13 @@ class _MapsPageState extends State<MapsPage> {
                   ),
                 );
               },
+                  onSelected: (String selection) {
+                    setState(() {
+                      selectedDeparture = selection;
+                    });
+                    print('Départ sélectionné : $selection');
+                  },
+
                 ),
                     SizedBox(height: 12.0),
 
@@ -184,6 +213,12 @@ class _MapsPageState extends State<MapsPage> {
                             border: OutlineInputBorder(),
                           ),
                         );
+                      },
+                      onSelected: (String selection) {
+                        setState(() {
+                          selectedDestination = selection;
+                        });
+                        print('Destination sélectionnée : $selection');
                       },
                     ),
 
@@ -219,4 +254,17 @@ class _MapsPageState extends State<MapsPage> {
       ),
     );
   }
+
+  Widget _buildTransportOption(IconData icon, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 40.0),
+        SizedBox(height: 4.0),
+        Text(label, style: TextStyle(fontSize: 12.0)),
+      ],
+    );
+  }
 }
++
+
