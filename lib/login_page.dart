@@ -4,6 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
 
+import 'bottom_nav_bar.dart';
+
 class LoginPage extends StatefulWidget {
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -24,8 +26,10 @@ class _LoginPageState extends State<LoginPage> {
           email: _email,
           password: _password,
         );
-        Navigator.pushReplacementNamed(context, '/bottomnav');
-      } catch (e) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => BottomNavBar()),
+        );         } catch (e) {
         print(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur de connexion')),
@@ -118,8 +122,10 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: () async {
                           try {
                             await _signInWithGoogle();
-                            Navigator.pushReplacementNamed(context, '/bottomnav');
-                          } catch (e) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => BottomNavBar()),
+                            );                          } catch (e) {
                             print(e);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Erreur de connexion avec Google')),

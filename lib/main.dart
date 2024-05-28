@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:guinea_roads/views/register_page.dart';
 import 'login_page.dart';
 import 'bottom_nav_bar.dart';
 
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         //'/': (context) => LoginPage(),
-        '/': (context) => BottomNavBar(),
+        '/': (context) => RegisterPage(),
       },
 
       debugShowCheckedModeBanner: false,
