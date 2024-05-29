@@ -30,12 +30,15 @@ class _MapsPageState extends State<MapsPage> {
   String? selectedDeparture;
   String? selectedDestination;
 
+  List<Map<String, dynamic>> transportOptions = [];
+
   @override
   void initState() {
     super.initState();
     selectedDeparture = widget.selectedDeparture; // Utilisation du paramètre du constructeur
     departController.text = selectedDeparture ?? '';
     _loadMarkers();
+    _loadTransportOptions();
   }
 
   Future<void> _loadMarkers() async {
@@ -46,7 +49,7 @@ class _MapsPageState extends State<MapsPage> {
         var marker = Marker(
           markerId: MarkerId(document.id),
           position: LatLng(geoPoint.latitude, geoPoint.longitude),
-          // Utiliser les coordonnées du GeoPoint
+          // Pour Utiliser les coordonnées du GeoPoint
           infoWindow: InfoWindow(
             title: data['name'],
             snippet: 'Arrêt de bus',
@@ -59,7 +62,64 @@ class _MapsPageState extends State<MapsPage> {
     });
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  Future<void> _loadTransportOptions() async {
+    try {
+      var querySnapshot = await FirebaseFirestore.instance.collection('ModesTransports').get();
+      List<Map<String, dynamic>> options = [];
+      for (var document in querySnapshot.docs) {
+        var data = document.data();
+        print("Document data: $data"); // pour vérifier les données récupérées
+
+        // Vérification et conversion du champ 'icon' en chaîne de caractères
+        if (data['icon'] is int) {
+          data['icon'] = data['icon'].toString();
+        }
+        options.add(data as Map<String, dynamic>);
+      }
+      setState(() {
+        transportOptions = options;
+      });
+
+      // Impression pour vérifier les données récupérées
+      print("Options de transport récupérées: $transportOptions");
+    } catch(error) {
+      print("Erreur lors de la récupération des options de transport: $error");
+    }
+    }
+
+  // Méthode pour construire les cartes de mode de transport
+  List<Widget> _buildTransportOptionCards() {
+    if (transportOptions.isEmpty) {
+      return [Text('Aucune option de transport disponible.')];
+    }
+    return transportOptions.map((option) {
+      print("Option de transport: $option"); // Pour vérifier chaque option
+
+      // Conversion de l'icône en IconData en tenant compte du type de données
+      IconData? icon;
+      try {
+         icon = IconData(
+            int.parse(option['icon']), fontFamily: 'MaterialIcons');
+      }catch(e){
+        print("Erreur lors de la conversion de l'icône : $e");
+      }
+
+      if (icon != null) {
+        return _buildTransportOption(icon, option['name']);
+      } else {
+        return Card(
+          child: ListTile(
+            leading: Icon(Icons.error),
+            title: Text(option['name']),
+            subtitle: Text("Erreur de l'icône"),
+          ),
+        );
+      }
+    }).toList();
+
+  }
+
+    void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
 
@@ -144,104 +204,101 @@ class _MapsPageState extends State<MapsPage> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-
-        appBar: AppBar(backgroundColor: Colors.white!.withOpacity(0.5), // Fond transparent
-            actions: [
-
-            ],
-            bottom: PreferredSize(
-              preferredSize: Size.fromHeight(175.0),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Card(
-                      margin: EdgeInsets.symmetric(vertical: 8.0),
-                      elevation: 4.0,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildTransportOption(Icons.local_taxi, 'Taxi'),
-                            _buildTransportOption(Icons.directions_car, 'Voiture'),
-                            _buildTransportOption(Icons.directions_bus, 'Minibus'),
-                            _buildTransportOption(Icons.motorcycle, 'Moto'),
-                            _buildTransportOption(Icons.electric_rickshaw, 'Tricycle'),
-                          ],
+        appBar: AppBar(
+          backgroundColor: Colors.white!.withOpacity(0.5), // Fond transparent
+          actions: [],
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(245.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Autocomplete<String>(
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            if (textEditingValue.text.isEmpty) {
+                              return const Iterable<String>.empty();
+                            }
+                            return _getSuggestions(textEditingValue.text);
+                          },
+                          fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                            return TextField(
+                              controller: textEditingController,
+                              focusNode: focusNode,
+                              decoration: InputDecoration(
+                                labelText: 'Départ',
+                                border: OutlineInputBorder(),
+                              ),
+                            );
+                          },
+                          onSelected: (String selection) {
+                            setState(() {
+                              selectedDeparture = selection;
+                            });
+                            print('Départ sélectionné : $selection');
+                          },
                         ),
                       ),
-                    ),
-                Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return const Iterable<String>.empty();
-                }
-                 return _getSuggestions(textEditingValue.text);
-              },
-              fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                return TextField(
-                  controller: textEditingController,
-                  focusNode: focusNode,
-                  decoration: InputDecoration(
-                    labelText: 'Départ',
-                    border: OutlineInputBorder(),
+
+                      Expanded(
+                        child: Autocomplete<String>(
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            return _getSuggestions(textEditingValue.text);
+                          },
+                          fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                            return TextField(
+                              controller: textEditingController,
+                              focusNode: focusNode,
+                              decoration: InputDecoration(
+                                labelText: 'Destination',
+                                border: OutlineInputBorder(),
+                              ),
+                            );
+                          },
+                          onSelected: (String selection) {
+                            setState(() {
+                              selectedDestination = selection;
+                            });
+                            print('Destination sélectionnée : $selection');
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
-                  onSelected: (String selection) {
-                    setState(() {
-                      selectedDeparture = selection;
-                    });
-                    print('Départ sélectionné : $selection');
-                  },
-
-                ),
-                    SizedBox(height: 12.0),
-
-                    Autocomplete<String>(
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        return _getSuggestions(textEditingValue.text);
-                      },
-                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                        return TextField(
-                          controller: textEditingController,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            labelText: 'Destination',
-                            border: OutlineInputBorder(),
-                          ),
-                        );
-                      },
-                      onSelected: (String selection) {
-                        setState(() {
-                          selectedDestination = selection;
-                        });
-                        print('Destination sélectionnée : $selection');
-                      },
-                    ),
-
-                    SizedBox(height: 12.0),
-                    ElevatedButton(
-                      onPressed: getDirections,//_getRoute, // Mise à jour pour appeler la fonction de tracé d'itinéraire,
-
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        // Définir la couleur de fond en bleu
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.0), // Arrondir les coins du bouton
-                        ),
+                  SizedBox(height: 10.0),
+                  Card(
+                    //color: Colors.white,
+                    margin: EdgeInsets.symmetric(vertical: 8.0),
+                    elevation: 4.0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: _buildTransportOptionCards(),
                       ),
-                      child: Text('Rechercher'),
                     ),
-
-
-                  ],
-                ),
+                  ),
+                  SizedBox(height: 10.0),
+                  ElevatedButton(
+                    onPressed: getDirections,//_getRoute, // Mise à jour pour appeler la fonction de tracé d'itinéraire,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      // Définir la couleur de fond en bleu
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0), // Arrondir les coins du bouton
+                      ),
+                    ),
+                    child: Text('Rechercher'),
+                  ),
+                  SizedBox(height: 5.0),
+                ],
               ),
-            )),
-
+            ),
+          ),
+        ),
         body: GoogleMap(
           onMapCreated: _onMapCreated,
           initialCameraPosition: CameraPosition(
@@ -266,5 +323,4 @@ class _MapsPageState extends State<MapsPage> {
     );
   }
 }
-+
 
