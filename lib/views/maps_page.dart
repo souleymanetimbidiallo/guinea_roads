@@ -198,6 +198,19 @@ class _MapsPageState extends State<MapsPage> {
     setState(() {});
   }
 
+  // Pour faire la commutation des valeurs dans départ et destination
+  void swapLocations() {
+    setState(() {
+      // Échanger les valeurs entre le départ et la destination
+      String? temp = selectedDeparture;
+      selectedDeparture = selectedDestination;
+      selectedDestination = temp;
+
+      // Mettre à jour les contrôleurs de texte
+      departController.text = selectedDeparture ?? '';
+      destinationController.text = selectedDestination ?? '';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -225,6 +238,7 @@ class _MapsPageState extends State<MapsPage> {
                             return _getSuggestions(textEditingValue.text);
                           },
                           fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                            textEditingController.text = departController.text; // Associe le contrôleur de texte
                             return TextField(
                               controller: textEditingController,
                               focusNode: focusNode,
@@ -237,9 +251,18 @@ class _MapsPageState extends State<MapsPage> {
                           onSelected: (String selection) {
                             setState(() {
                               selectedDeparture = selection;
+                              departController.text = selection;
                             });
                             print('Départ sélectionné : $selection');
                           },
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: GestureDetector(
+                          onTap: swapLocations, // Appeler la méthode d'échange
+                          child: Icon(Icons.swap_horiz), // Icône de flèche bidirectionnelle horizontale
                         ),
                       ),
 
@@ -249,6 +272,7 @@ class _MapsPageState extends State<MapsPage> {
                             return _getSuggestions(textEditingValue.text);
                           },
                           fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                            textEditingController.text = destinationController.text; // Associe le contrôleur de texte
                             return TextField(
                               controller: textEditingController,
                               focusNode: focusNode,
@@ -261,6 +285,7 @@ class _MapsPageState extends State<MapsPage> {
                           onSelected: (String selection) {
                             setState(() {
                               selectedDestination = selection;
+                              destinationController.text = selection;
                             });
                             print('Destination sélectionnée : $selection');
                           },
