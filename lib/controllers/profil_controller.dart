@@ -15,7 +15,7 @@ class ProfilController {
           id: currentUser.uid,
           name: currentUser.displayName ?? '',
           email: currentUser.email ?? '',
-          history: [], // Vous devrez remplir cette liste avec l'historique des trajets si vous le stockez quelque part
+          history: [],
           photoUrl: currentUser.photoURL,
         );
         print('User fetched: ${user?.name}');
