@@ -1,8 +1,15 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
+import 'package:guinea_roads/models/profil_model.dart';
 
-import 'search_page.dart';
+import 'views/profil_page.dart';
 import 'views/arrets_page.dart';
-import 'views/maps_page.dart';
+import 'views/maps_page.dart';*/
+
+import 'package:flutter/material.dart';
+import 'package:guinea_roads/views/profil_page.dart';
+import 'package:guinea_roads/views/arrets_page.dart';
+import 'package:guinea_roads/views/maps_page.dart';
+
 
 void main() {
   runApp(MaterialApp(
@@ -21,7 +28,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   static List<Widget> _widgetOptions = <Widget>[
     MapsPage(),
     ArretsPage(),
-    SearchPage(),
+    ProfilPage(),
 
   ];
 
