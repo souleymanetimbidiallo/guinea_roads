@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:guinea_roads/controllers/stop_controller.dart';
 import 'package:guinea_roads/views/maps_page.dart';
+
 class ArretsPage extends StatefulWidget {
   @override
   _ArretsPageState createState() => _ArretsPageState();
@@ -9,7 +10,6 @@ class ArretsPage extends StatefulWidget {
 
 class _ArretsPageState extends State<ArretsPage> {
   ArretsController controller = ArretsController();
-
 
   TextEditingController _searchController = TextEditingController();
   List<DocumentSnapshot> _arrets = [];
@@ -20,12 +20,14 @@ class _ArretsPageState extends State<ArretsPage> {
     super.initState();
     _searchController.addListener(_filterArrets);
   }
+
   @override
   void dispose() {
     _searchController.removeListener(_filterArrets);
     _searchController.dispose();
     super.dispose();
   }
+
   void _filterArrets() {
     final query = _searchController.text.toLowerCase();
     setState(() {
@@ -40,7 +42,6 @@ class _ArretsPageState extends State<ArretsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(50.0),
           child: Padding(
@@ -102,7 +103,11 @@ class _ArretsPageState extends State<ArretsPage> {
                   trailing: Icon(Icons.arrow_forward_ios, color: Colors.blueAccent),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => MapsPage()),
+                    MaterialPageRoute(
+                      builder: (context) => MapsPage(
+                        selectedDeparture: data['name'], // Pass the stop name to MapsPage
+                      ),
+                    ),
                   ),
                 ),
               );
