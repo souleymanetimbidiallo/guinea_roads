@@ -21,7 +21,7 @@ class _MapsPageState extends State<MapsPage> {
   final LatLng _center = const LatLng(9.669334, -13.558108);
 
   Set<Marker> markers = {};
-  Map<PolylineId, Polyline> map_polylines = {}; //polylines to show direction
+  Map<PolylineId, Polyline> mapPolylines = {}; //polylines to show direction
 
   // Création de TextEditingControllers pour les champs de texte
   TextEditingController departController = TextEditingController();
@@ -48,8 +48,7 @@ class _MapsPageState extends State<MapsPage> {
         GeoPoint geoPoint = data['location']; // Récupérer le GeoPoint
         var marker = Marker(
           markerId: MarkerId(document.id),
-          position: LatLng(geoPoint.latitude, geoPoint.longitude),
-          // Pour Utiliser les coordonnées du GeoPoint
+          position: LatLng(geoPoint.latitude, geoPoint.longitude), // Utiliser les coordonnées du GeoPoint
           infoWindow: InfoWindow(
             title: data['name'],
             snippet: 'Arrêt de bus',
@@ -82,10 +81,10 @@ class _MapsPageState extends State<MapsPage> {
 
       // Impression pour vérifier les données récupérées
       print("Options de transport récupérées: $transportOptions");
-    } catch(error) {
+    } catch (error) {
       print("Erreur lors de la récupération des options de transport: $error");
     }
-    }
+  }
 
   // Méthode pour construire les cartes de mode de transport
   List<Widget> _buildTransportOptionCards() {
@@ -98,9 +97,8 @@ class _MapsPageState extends State<MapsPage> {
       // Conversion de l'icône en IconData en tenant compte du type de données
       IconData? icon;
       try {
-         icon = IconData(
-            int.parse(option['icon']), fontFamily: 'MaterialIcons');
-      }catch(e){
+        icon = IconData(int.parse(option['icon']), fontFamily: 'MaterialIcons');
+      } catch (e) {
         print("Erreur lors de la conversion de l'icône : $e");
       }
 
@@ -116,10 +114,9 @@ class _MapsPageState extends State<MapsPage> {
         );
       }
     }).toList();
-
   }
 
-    void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
   }
 
@@ -166,27 +163,27 @@ class _MapsPageState extends State<MapsPage> {
 
       final List<LatLng> polylineCoordinates = [];
 
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      googleAPiKey,
-      PointLatLng(departure.latitude, departure.longitude),
-      PointLatLng(arrival.latitude, arrival.longitude),
-      travelMode: TravelMode.driving,
-    );
+      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        googleAPiKey,
+        PointLatLng(departure.latitude, departure.longitude),
+        PointLatLng(arrival.latitude, arrival.longitude),
+        travelMode: TravelMode.driving,
+      );
 
-    if (result.points.isNotEmpty) {
-      result.points.forEach((PointLatLng point) {
-        polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-      });
-      addPolyLine(polylineCoordinates);
-    } else {
-      print(result.errorMessage);
+      if (result.points.isNotEmpty) {
+        result.points.forEach((PointLatLng point) {
+          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+        });
+        addPolyLine(polylineCoordinates);
+      } else {
+        print(result.errorMessage);
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération des coordonnées: $e');
     }
-  } catch(e){
-  print('Erreur lors de la récupération des coordonnées: $e');
   }
-}
 
-  addPolyLine(List<LatLng> polylineCoordinates) {
+  void addPolyLine(List<LatLng> polylineCoordinates) {
     PolylineId id = PolylineId("poly");
     Polyline polyline = Polyline(
       polylineId: id,
@@ -194,7 +191,7 @@ class _MapsPageState extends State<MapsPage> {
       points: polylineCoordinates,
       width: 8,
     );
-    map_polylines[id] = polyline;
+    mapPolylines[id] = polyline;
     setState(() {});
   }
 
@@ -218,7 +215,7 @@ class _MapsPageState extends State<MapsPage> {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.white!.withOpacity(0.5), // Fond transparent
+          backgroundColor: Colors.white.withOpacity(0.5), // Fond transparent
           actions: [],
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(245.0),
@@ -257,7 +254,6 @@ class _MapsPageState extends State<MapsPage> {
                           },
                         ),
                       ),
-
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: GestureDetector(
@@ -265,7 +261,6 @@ class _MapsPageState extends State<MapsPage> {
                           child: Icon(Icons.swap_horiz), // Icône de flèche bidirectionnelle horizontale
                         ),
                       ),
-
                       Expanded(
                         child: Autocomplete<String>(
                           optionsBuilder: (TextEditingValue textEditingValue) {
@@ -308,7 +303,7 @@ class _MapsPageState extends State<MapsPage> {
                   ),
                   SizedBox(height: 10.0),
                   ElevatedButton(
-                    onPressed: getDirections,//_getRoute, // Mise à jour pour appeler la fonction de tracé d'itinéraire,
+                    onPressed: getDirections, // Mise à jour pour appeler la fonction de tracé d'itinéraire,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       // Définir la couleur de fond en bleu
@@ -331,7 +326,7 @@ class _MapsPageState extends State<MapsPage> {
             zoom: 11.2,
           ),
           markers: markers,
-          polylines: Set<Polyline>.of(map_polylines.values), // S'assurer que cette ligne est correcte
+          polylines: Set<Polyline>.of(mapPolylines.values), // S'assurer que cette ligne est correcte
         ),
       ),
     );
@@ -348,4 +343,3 @@ class _MapsPageState extends State<MapsPage> {
     );
   }
 }
-
