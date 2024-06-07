@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 
 class MapsPage extends StatefulWidget {
@@ -14,6 +15,12 @@ class MapsPage extends StatefulWidget {
 }
 
 class _MapsPageState extends State<MapsPage> {
+  static const int carCostPerStop = 2000;
+  static const int tricycleCostPerStop = 2500;
+  List<LatLng> stops = [];
+
+  String estimatedCost = '';//Variable pour l'estimation de cout
+
   late GoogleMapController mapController;
   PolylinePoints polylinePoints = PolylinePoints();
   String googleAPiKey = "AIzaSyAkxWY7GjJGgARoAbD1DZlpFNSaJPsQQrY";
@@ -29,6 +36,7 @@ class _MapsPageState extends State<MapsPage> {
 
   String? selectedDeparture;
   String? selectedDestination;
+  String? selectedTransportMode = 'taxi';
 
   List<Map<String, dynamic>> transportOptions = [];
 
@@ -40,6 +48,7 @@ class _MapsPageState extends State<MapsPage> {
     _loadMarkers();
     _loadTransportOptions();
   }
+  List<LatLng> listDesArrets = [];
 
   Future<void> _loadMarkers() async {
     FirebaseFirestore.instance.collection('Arrets').get().then((querySnapshot) {
@@ -151,6 +160,157 @@ class _MapsPageState extends State<MapsPage> {
     }
   }
 
+  // Calcul de cout
+
+  int calculateCost(String transportMode, int numberOfStops) {
+    int costPerStop;
+    if (transportMode == 'taxi') {
+      costPerStop = carCostPerStop;
+    } else if (transportMode == 'tricycle') {
+      costPerStop = tricycleCostPerStop;
+    } else {
+      //return 0; // ou gérer d'autres modes de transport
+      throw Exception('Mode de transport inconnu');
+    }
+
+    return costPerStop * numberOfStops;
+  }
+
+
+  Future<int> calculateNumberOfStops(LatLng departure, LatLng arrival) async {
+    // Récupérer les noms des arrêts pour le départ et l'arrivée
+    String departureStopName = await getStopNameFromLatLng(departure);
+    String arrivalStopName = await getStopNameFromLatLng(arrival);
+
+    print('Departure stop name: $departureStopName'); // Debugging
+    print('Arrival stop name: $arrivalStopName'); // Debugging
+
+    // Récupérer l'ordre du point de départ
+    int departureOrder = await getStopOrder(departureStopName);
+
+    // Récupérer l'ordre du point d'arrivée
+    int arrivalOrder = await getStopOrder(arrivalStopName);
+
+    // Si l'ordre de départ est supérieur à l'ordre d'arrivée, échanger les valeurs
+    if (departureOrder > arrivalOrder) {
+      int temp = departureOrder;
+      departureOrder = arrivalOrder;
+      arrivalOrder = temp;
+    }
+
+    // Calculer le nombre d'arrêts en fonction de l'ordre des arrêts
+    int numberOfStops = arrivalOrder - departureOrder;
+
+    return numberOfStops;
+  }
+
+  Future<String> getStopNameFromLatLng(LatLng latLng) async {
+    // Récupérer les données des arrêts depuis la base de données Firestore
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('Arrets').get();
+
+    // Parcourir les documents pour trouver l'arrêt le plus proche des coordonnées fournies
+    for (var doc in querySnapshot.docs) {
+      var data = doc.data() as Map<String, dynamic>;
+      GeoPoint geoPoint = data['location'];
+      LatLng stopLatLng = LatLng(geoPoint.latitude, geoPoint.longitude);
+
+      // Vérifier si les coordonnées correspondent
+      if (stopLatLng == latLng) {
+        // Retourner le nom de l'arrêt
+        return data['name'];
+      }
+    }
+
+    // Si aucun arrêt n'est trouvé pour les coordonnées fournies, renvoyer une chaîne vide
+    return '';
+  }
+
+  Future<int> getStopOrder(String stopName) async {
+    // Récupérer l'ordre de l'arrêt à partir de la base de données
+    // Vous pouvez utiliser la latitude et la longitude de l'arrêt pour rechercher dans la collection Arrets
+    // Puis, vous pouvez extraire l'ordre de l'arrêt à partir des données récupérées
+    // Enfin, retournez l'ordre de l'arrêt
+
+    // Exemple de code à adapter à votre base de données :
+    var snapshot = await FirebaseFirestore.instance.collection('Arrets')
+        .where('name', isEqualTo: stopName)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      var data = snapshot.docs.first.data() as Map<String, dynamic>;
+      return data['order'];
+    } else {
+      throw Exception('Ordre de l\'arrêt non trouvé');
+    }
+  }
+
+  Future<List<LatLng>> getStopsBetween(LatLng departure, LatLng arrival) async {
+    List<LatLng> stops = [];
+
+    // Récupérer les arrêts depuis la base de données
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('Arrets').get();
+
+    for (var doc in querySnapshot.docs) {
+      var data = doc.data() as Map<String, dynamic>;
+      GeoPoint geoPoint = data['location'];
+      LatLng stop = LatLng(geoPoint.latitude, geoPoint.longitude);
+      stops.add(stop);
+    }
+
+    // Tri des arrêts par distance à partir du départ pour simuler les arrêts intermédiaires dans l'ordre
+    stops.sort((a, b) => calculateDistance(departure, a).compareTo(calculateDistance(departure, b)));
+
+    // Filtrer les arrêts entre le départ et l'arrivée
+    List<LatLng> stopsBetween = [];
+    //List<LatLng> stopsBetween = await getStopsBetween(departure, arrival);
+
+    bool started = false;
+    for (var stop in stops) {
+      if (!started && calculateDistance(departure, stop) < calculateDistance(departure, arrival)) {
+        started = true;
+      }
+      if (started && calculateDistance(stop, arrival) < calculateDistance(departure, arrival)) {
+        stopsBetween.add(stop);
+      }
+      if (calculateDistance(stop, arrival) == 0) {
+        break;
+      }
+    }
+
+    //return stops;
+    return stopsBetween;
+  }
+
+  double calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371; // Rayon de la Terre en kilomètres
+
+    // Conversion des degrés en radians
+    double lat1Radians = _degreesToRadians(point1.latitude);
+    double lon1Radians = _degreesToRadians(point1.longitude);
+    double lat2Radians = _degreesToRadians(point2.latitude);
+    double lon2Radians = _degreesToRadians(point2.longitude);
+
+    // Calcul des différences de latitude et de longitude
+    double dLat = _degreesToRadians(lat2Radians - lat1Radians);
+    double dLon = _degreesToRadians(lon2Radians - lon1Radians);
+
+    // Formule de Haversine pour calculer la distance entre deux points
+
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1Radians) * cos(lat2Radians) * sin(dLon / 2) * sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    double distance = earthRadius * c;
+
+    return distance;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * pi / 180;
+  }
+
+
+
   void getDirections() async {
     if (selectedDeparture == null || selectedDestination == null) {
       print('Veuillez sélectionner à la fois un départ et une destination.');
@@ -161,8 +321,31 @@ class _MapsPageState extends State<MapsPage> {
       final LatLng departure = await _getLatLngFromStopName(selectedDeparture!);
       final LatLng arrival = await _getLatLngFromStopName(selectedDestination!);
 
-      final List<LatLng> polylineCoordinates = [];
+      // Récupérer les arrêts entre le départ et l'arrivée
+      List<LatLng> stopsBetween = await getStopsBetween(departure, arrival);
 
+      // Créer une liste complète des points du tracé en incluant le départ, les arrêts intermédiaires, et l'arrivée
+      List<LatLng> polylineCoordinates = [departure, ...stopsBetween, arrival];
+
+//    Récupérer le tracé de l'itinéraire complet
+      List<LatLng> routeCoordinates = [];
+
+      for (int i = 0; i < polylineCoordinates.length - 1; i++) {
+        PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+          googleAPiKey,
+          PointLatLng(polylineCoordinates[i].latitude, polylineCoordinates[i].longitude),
+          PointLatLng(polylineCoordinates[i + 1].latitude, polylineCoordinates[i + 1].longitude),
+          travelMode: TravelMode.driving,
+        );
+        if (result.points.isNotEmpty) {
+          result.points.forEach((PointLatLng point) {
+            routeCoordinates.add(LatLng(point.latitude, point.longitude));
+          });
+        }
+      }
+      addPolyLine(routeCoordinates);
+
+      // Récupérer l'itinéraire entre le départ et l'arrivée
       PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
         googleAPiKey,
         PointLatLng(departure.latitude, departure.longitude),
@@ -170,11 +353,27 @@ class _MapsPageState extends State<MapsPage> {
         travelMode: TravelMode.driving,
       );
 
+      // Ajouter les points du tracé de l'itinéraire principal
       if (result.points.isNotEmpty) {
         result.points.forEach((PointLatLng point) {
           polylineCoordinates.add(LatLng(point.latitude, point.longitude));
         });
-        addPolyLine(polylineCoordinates);
+        // Calculer le nombre d'arrêts entre le point de départ et le point d'arrivée
+        int numberOfStops = await calculateNumberOfStops(departure, arrival);
+
+        // Récupérer les arrêts entre le départ et l'arrivée
+        List<LatLng> stopsBetween = await getStopsBetween(departure, arrival);
+
+        // Mettre à jour la liste des arrêts
+        setState(() {
+          stops = stopsBetween;
+        });
+
+        int totalCost = calculateCost(selectedTransportMode!, numberOfStops); // Changer 'Voiture' par le mode de transport choisi
+
+        setState(() {
+          estimatedCost = '$totalCost FG';
+        });
       } else {
         print(result.errorMessage);
       }
@@ -191,8 +390,9 @@ class _MapsPageState extends State<MapsPage> {
       points: polylineCoordinates,
       width: 8,
     );
-    mapPolylines[id] = polyline;
-    setState(() {});
+    setState(() {
+      mapPolylines[id] = polyline;
+    });
   }
 
   // Pour faire la commutation des valeurs dans départ et destination
@@ -301,6 +501,9 @@ class _MapsPageState extends State<MapsPage> {
                       ),
                     ),
                   ),
+                  SizedBox(height: 10.0),
+
+                  if (estimatedCost.isNotEmpty) Text('Coût estimé: $estimatedCost'),
                   SizedBox(height: 10.0),
                   ElevatedButton(
                     onPressed: getDirections, // Mise à jour pour appeler la fonction de tracé d'itinéraire,
