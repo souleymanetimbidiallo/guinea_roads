@@ -48,6 +48,7 @@ dependencies:
   flutter_signin_button: ^2.0.0
   firebase_storage: ^11.7.7
   image_picker: 1.0.0
+  flutter_dotenv: ^5.0.2
 
 
 dev_dependencies:

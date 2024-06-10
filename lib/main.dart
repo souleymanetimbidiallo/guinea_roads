@@ -4,6 +4,7 @@ import 'package:guinea_roads/views/register_page.dart';
 import 'login_page.dart';
 import 'bottom_nav_bar.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
