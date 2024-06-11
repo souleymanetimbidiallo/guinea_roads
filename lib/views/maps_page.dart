@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
@@ -15,8 +16,8 @@ class MapsPage extends StatefulWidget {
 }
 
 class _MapsPageState extends State<MapsPage> {
-  static const int carCostPerStop = 2000;
-  static const int tricycleCostPerStop = 2500;
+ // static const int carCostPerStop = 2000;
+  //static const int tricycleCostPerStop = 2500;
   List<LatLng> stops = [];
 
   String estimatedCost = '';//Variable pour l'estimation de cout
@@ -36,7 +37,9 @@ class _MapsPageState extends State<MapsPage> {
 
   String? selectedDeparture;
   String? selectedDestination;
-  String? selectedTransportMode = 'taxi';
+ // String? selectedTransportMode = 'taxi';
+  String? selectedTransportMode;
+
 
   List<Map<String, dynamic>> transportOptions = [];
 
@@ -96,7 +99,7 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   // Méthode pour construire les cartes de mode de transport
-  List<Widget> _buildTransportOptionCards() {
+  /*List<Widget> _buildTransportOptionCards() {
     if (transportOptions.isEmpty) {
       return [Text('Aucune option de transport disponible.')];
     }
@@ -123,6 +126,39 @@ class _MapsPageState extends State<MapsPage> {
         );
       }
     }).toList();
+  }*/
+
+  List<Widget> _buildTransportOptionCards() {
+    if (transportOptions.isEmpty) {
+      return [Text('Aucune option de transport disponible.')];
+    }
+    return transportOptions.map((option) {
+      return _buildTransportOptionCard(option['icon'], option['name'], option['costPerStop']);
+    }).toList();
+  }
+
+  Widget _buildTransportOptionCard(String icon, String label, int costPerStop) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedTransportMode = label;
+        });
+      },
+      child: Card(
+        color: selectedTransportMode == label ? Colors.blue : Colors.white,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              IconData(int.parse(icon), fontFamily: 'MaterialIcons'),
+              size: 60.0,
+            ),
+            SizedBox(height: 0.0),
+            Text(label, style: TextStyle(fontSize: 12.0)),
+          ],
+        ),
+      ),
+    );
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -160,19 +196,7 @@ class _MapsPageState extends State<MapsPage> {
     }
   }
 
-  // Calcul de cout
-
-  int calculateCost(String transportMode, int numberOfStops) {
-    int costPerStop;
-    if (transportMode == 'taxi') {
-      costPerStop = carCostPerStop;
-    } else if (transportMode == 'tricycle') {
-      costPerStop = tricycleCostPerStop;
-    } else {
-      //return 0; // ou gérer d'autres modes de transport
-      throw Exception('Mode de transport inconnu');
-    }
-
+  int calculateCost(int costPerStop, int numberOfStops) {
     return costPerStop * numberOfStops;
   }
 
@@ -310,7 +334,6 @@ class _MapsPageState extends State<MapsPage> {
   }
 
 
-
   void getDirections() async {
     if (selectedDeparture == null || selectedDestination == null) {
       print('Veuillez sélectionner à la fois un départ et une destination.');
@@ -331,12 +354,14 @@ class _MapsPageState extends State<MapsPage> {
       List<LatLng> routeCoordinates = [];
 
       for (int i = 0; i < polylineCoordinates.length - 1; i++) {
+        // Récupérer l'itinéraire entre le départ et l'arrivée
         PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
           googleAPiKey,
           PointLatLng(polylineCoordinates[i].latitude, polylineCoordinates[i].longitude),
           PointLatLng(polylineCoordinates[i + 1].latitude, polylineCoordinates[i + 1].longitude),
           travelMode: TravelMode.driving,
         );
+        // Ajouter les points du tracé de l'itinéraire principal
         if (result.points.isNotEmpty) {
           result.points.forEach((PointLatLng point) {
             routeCoordinates.add(LatLng(point.latitude, point.longitude));
@@ -345,39 +370,21 @@ class _MapsPageState extends State<MapsPage> {
       }
       addPolyLine(routeCoordinates);
 
-      // Récupérer l'itinéraire entre le départ et l'arrivée
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleAPiKey,
-        PointLatLng(departure.latitude, departure.longitude),
-        PointLatLng(arrival.latitude, arrival.longitude),
-        travelMode: TravelMode.driving,
-      );
-
-      // Ajouter les points du tracé de l'itinéraire principal
-      if (result.points.isNotEmpty) {
-        result.points.forEach((PointLatLng point) {
-          polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-        });
-        // Calculer le nombre d'arrêts entre le point de départ et le point d'arrivée
-        int numberOfStops = await calculateNumberOfStops(departure, arrival);
-
-        // Récupérer les arrêts entre le départ et l'arrivée
-        List<LatLng> stopsBetween = await getStopsBetween(departure, arrival);
+      // Calculer le nombre d'arrêts entre le point de départ et le point d'arrivée
+      int numberOfStops = await calculateNumberOfStops(departure, arrival);
 
         // Mettre à jour la liste des arrêts
-        setState(() {
+      setState(() {
           stops = stopsBetween;
-        });
+      });
+      int costPerStop = transportOptions.firstWhere((option) => option['name'] == selectedTransportMode)['costPerStop'];
 
-        int totalCost = calculateCost(selectedTransportMode!, numberOfStops); // Changer 'Voiture' par le mode de transport choisi
+      int totalCost = calculateCost(costPerStop, numberOfStops);
 
-        setState(() {
+      setState(() {
           estimatedCost = '$totalCost FG';
         });
-      } else {
-        print(result.errorMessage);
-      }
-    } catch (e) {
+      } catch (e) {
       print('Erreur lors de la récupération des coordonnées: $e');
     }
   }
@@ -530,19 +537,10 @@ class _MapsPageState extends State<MapsPage> {
           ),
           markers: markers,
           polylines: Set<Polyline>.of(mapPolylines.values), // S'assurer que cette ligne est correcte
+          trafficEnabled: true,
         ),
       ),
     );
   }
 
-  Widget _buildTransportOption(IconData icon, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 40.0),
-        SizedBox(height: 4.0),
-        Text(label, style: TextStyle(fontSize: 12.0)),
-      ],
-    );
-  }
 }
