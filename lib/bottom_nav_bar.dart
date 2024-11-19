@@ -12,12 +12,14 @@ import 'package:guinea_roads/views/maps_page.dart';
 
 
 void main() {
-  runApp(MaterialApp(
+  runApp(const MaterialApp(
     home: BottomNavBar(),
   ));
 }
 
 class BottomNavBar extends StatefulWidget {
+  const BottomNavBar({super.key});
+
   @override
   _BottomNavBarState createState() => _BottomNavBarState();
 }
@@ -25,10 +27,10 @@ class BottomNavBar extends StatefulWidget {
 class _BottomNavBarState extends State<BottomNavBar> {
   int _selectedIndex = 0;
 
-  static List<Widget> _widgetOptions = <Widget>[
-    MapsPage(),
-    ArretsPage(),
-    ProfilPage(),
+  static final List<Widget> _widgetOptions = <Widget>[
+    const MapsPage(),
+    const ArretsPage(),
+    const ProfilPage(),
 
   ];
 

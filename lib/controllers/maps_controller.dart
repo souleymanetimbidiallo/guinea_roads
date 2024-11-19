@@ -45,11 +45,14 @@ class MapsController {
     List<LatLng> polylineCoordinates = [];
     for (int i = 0; i < waypoints.length - 1; i++) {
       PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey,
-        PointLatLng(waypoints[i].latitude, waypoints[i].longitude),
-        PointLatLng(waypoints[i + 1].latitude, waypoints[i + 1].longitude),
-        travelMode: TravelMode.driving,
+        googleApiKey: googleApiKey,
+          request: PolylineRequest(
+            origin: PointLatLng(waypoints[i].latitude, waypoints[i].longitude),
+            destination: PointLatLng(waypoints[i + 1].latitude, waypoints[i + 1].longitude),
+        mode: TravelMode.driving
+          )
       );
+
       if (result.points.isNotEmpty) {
         for (var point in result.points) {
           polylineCoordinates.add(LatLng(point.latitude, point.longitude));

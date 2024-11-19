@@ -2,22 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:convert';
 import 'dart:math';
-import 'package:http/http.dart' as http;
 
 class MapsPage extends StatefulWidget {
   final String? selectedDeparture;
-  MapsPage({Key? key, this.selectedDeparture}) : super(key: key);
+  const MapsPage({super.key, this.selectedDeparture});
 
   @override
   _MapsPageState createState() => _MapsPageState();
 }
 
 class _MapsPageState extends State<MapsPage> {
- // static const int carCostPerStop = 2000;
-  //static const int tricycleCostPerStop = 2500;
   List<LatLng> stops = [];
 
   String estimatedCost = '';//Variable pour l'estimation de cout
@@ -37,7 +32,6 @@ class _MapsPageState extends State<MapsPage> {
 
   String? selectedDeparture;
   String? selectedDestination;
- // String? selectedTransportMode = 'taxi';
   String? selectedTransportMode;
 
 
@@ -51,12 +45,11 @@ class _MapsPageState extends State<MapsPage> {
     _loadMarkers();
     _loadTransportOptions();
   }
-  List<LatLng> listDesArrets = [];
 
   Future<void> _loadMarkers() async {
     FirebaseFirestore.instance.collection('Arrets').get().then((querySnapshot) {
-      querySnapshot.docs.forEach((document) {
-        var data = document.data() as Map<String, dynamic>;
+      for (var document in querySnapshot.docs) {
+        var data = document.data();
         GeoPoint geoPoint = data['location']; // Récupérer le GeoPoint
         var marker = Marker(
           markerId: MarkerId(document.id),
@@ -69,7 +62,7 @@ class _MapsPageState extends State<MapsPage> {
         setState(() {
           markers.add(marker);
         });
-      });
+      }
     });
   }
 
@@ -85,7 +78,7 @@ class _MapsPageState extends State<MapsPage> {
         if (data['icon'] is int) {
           data['icon'] = data['icon'].toString();
         }
-        options.add(data as Map<String, dynamic>);
+        options.add(data);
       }
       setState(() {
         transportOptions = options;
@@ -98,39 +91,11 @@ class _MapsPageState extends State<MapsPage> {
     }
   }
 
-  // Méthode pour construire les cartes de mode de transport
-  /*List<Widget> _buildTransportOptionCards() {
-    if (transportOptions.isEmpty) {
-      return [Text('Aucune option de transport disponible.')];
-    }
-    return transportOptions.map((option) {
-      print("Option de transport: $option"); // Pour vérifier chaque option
 
-      // Conversion de l'icône en IconData en tenant compte du type de données
-      IconData? icon;
-      try {
-        icon = IconData(int.parse(option['icon']), fontFamily: 'MaterialIcons');
-      } catch (e) {
-        print("Erreur lors de la conversion de l'icône : $e");
-      }
-
-      if (icon != null) {
-        return _buildTransportOption(icon, option['name']);
-      } else {
-        return Card(
-          child: ListTile(
-            leading: Icon(Icons.error),
-            title: Text(option['name']),
-            subtitle: Text("Erreur de l'icône"),
-          ),
-        );
-      }
-    }).toList();
-  }*/
 
   List<Widget> _buildTransportOptionCards() {
     if (transportOptions.isEmpty) {
-      return [Text('Aucune option de transport disponible.')];
+      return [const Text('Aucune option de transport disponible.')];
     }
     return transportOptions.map((option) {
       return _buildTransportOptionCard(option['icon'], option['name'], option['costPerStop']);
@@ -153,8 +118,8 @@ class _MapsPageState extends State<MapsPage> {
               IconData(int.parse(icon), fontFamily: 'MaterialIcons'),
               size: 60.0,
             ),
-            SizedBox(height: 0.0),
-            Text(label, style: TextStyle(fontSize: 12.0)),
+            const SizedBox(height: 0.0),
+            Text(label, style: const TextStyle(fontSize: 12.0)),
           ],
         ),
       ),
@@ -172,7 +137,7 @@ class _MapsPageState extends State<MapsPage> {
       var snapshot = await FirebaseFirestore.instance.collection('Arrets')
           .orderBy('name')
           .startAt([query.toLowerCase()])
-          .endAt([query.toLowerCase() + '\uf8ff'])
+          .endAt(['${query.toLowerCase()}\uf8ff'])
           .get();
 
       return snapshot.docs.map((doc) => doc.data()['name'].toString()).toList();
@@ -188,7 +153,7 @@ class _MapsPageState extends State<MapsPage> {
         .get();
 
     if (snapshot.docs.isNotEmpty) {
-      var data = snapshot.docs.first.data() as Map<String, dynamic>;
+      var data = snapshot.docs.first.data();
       GeoPoint geoPoint = data['location'];
       return LatLng(geoPoint.latitude, geoPoint.longitude);
     } else {
@@ -261,7 +226,7 @@ class _MapsPageState extends State<MapsPage> {
         .get();
 
     if (snapshot.docs.isNotEmpty) {
-      var data = snapshot.docs.first.data() as Map<String, dynamic>;
+      var data = snapshot.docs.first.data();
       return data['order'];
     } else {
       throw Exception('Ordre de l\'arrêt non trouvé');
@@ -356,16 +321,19 @@ class _MapsPageState extends State<MapsPage> {
       for (int i = 0; i < polylineCoordinates.length - 1; i++) {
         // Récupérer l'itinéraire entre le départ et l'arrivée
         PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-          googleAPiKey,
-          PointLatLng(polylineCoordinates[i].latitude, polylineCoordinates[i].longitude),
-          PointLatLng(polylineCoordinates[i + 1].latitude, polylineCoordinates[i + 1].longitude),
-          travelMode: TravelMode.driving,
+          googleApiKey: googleAPiKey,
+            request: PolylineRequest(
+              origin: PointLatLng(polylineCoordinates[i].latitude, polylineCoordinates[i].longitude),
+              destination: PointLatLng(polylineCoordinates[i + 1].latitude, polylineCoordinates[i + 1].longitude),
+              mode: TravelMode.driving)
         );
+
+
         // Ajouter les points du tracé de l'itinéraire principal
         if (result.points.isNotEmpty) {
-          result.points.forEach((PointLatLng point) {
+          for (var point in result.points) {
             routeCoordinates.add(LatLng(point.latitude, point.longitude));
-          });
+          }
         }
       }
       addPolyLine(routeCoordinates);
@@ -390,7 +358,7 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   void addPolyLine(List<LatLng> polylineCoordinates) {
-    PolylineId id = PolylineId("poly");
+    PolylineId id = const PolylineId("poly");
     Polyline polyline = Polyline(
       polylineId: id,
       color: Colors.deepPurpleAccent,
@@ -423,9 +391,9 @@ class _MapsPageState extends State<MapsPage> {
       home: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.white.withOpacity(0.5), // Fond transparent
-          actions: [],
+          actions: const [],
           bottom: PreferredSize(
-            preferredSize: Size.fromHeight(245.0),
+            preferredSize: const Size.fromHeight(245.0),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               child: Column(
@@ -446,7 +414,7 @@ class _MapsPageState extends State<MapsPage> {
                             return TextField(
                               controller: textEditingController,
                               focusNode: focusNode,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 labelText: 'Départ',
                                 border: OutlineInputBorder(),
                               ),
@@ -465,7 +433,7 @@ class _MapsPageState extends State<MapsPage> {
                         padding: const EdgeInsets.all(8.0),
                         child: GestureDetector(
                           onTap: swapLocations, // Appeler la méthode d'échange
-                          child: Icon(Icons.swap_horiz), // Icône de flèche bidirectionnelle horizontale
+                          child: const Icon(Icons.swap_horiz), // Icône de flèche bidirectionnelle horizontale
                         ),
                       ),
                       Expanded(
@@ -478,7 +446,7 @@ class _MapsPageState extends State<MapsPage> {
                             return TextField(
                               controller: textEditingController,
                               focusNode: focusNode,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 labelText: 'Destination',
                                 border: OutlineInputBorder(),
                               ),
@@ -495,10 +463,10 @@ class _MapsPageState extends State<MapsPage> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 10.0),
+                  const SizedBox(height: 10.0),
                   Card(
                     //color: Colors.white,
-                    margin: EdgeInsets.symmetric(vertical: 8.0),
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
                     elevation: 4.0,
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -508,10 +476,10 @@ class _MapsPageState extends State<MapsPage> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 10.0),
+                  const SizedBox(height: 10.0),
 
                   if (estimatedCost.isNotEmpty) Text('Coût estimé: $estimatedCost'),
-                  SizedBox(height: 10.0),
+                  const SizedBox(height: 10.0),
                   ElevatedButton(
                     onPressed: getDirections, // Mise à jour pour appeler la fonction de tracé d'itinéraire,
                     style: ElevatedButton.styleFrom(
@@ -521,9 +489,9 @@ class _MapsPageState extends State<MapsPage> {
                         borderRadius: BorderRadius.circular(8.0), // Arrondir les coins du bouton
                       ),
                     ),
-                    child: Text('Rechercher'),
+                    child: const Text('Rechercher'),
                   ),
-                  SizedBox(height: 5.0),
+                  const SizedBox(height: 5.0),
                 ],
               ),
             ),

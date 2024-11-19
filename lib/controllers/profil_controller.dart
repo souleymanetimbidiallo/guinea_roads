@@ -56,7 +56,7 @@ class ProfilController {
       }
     } catch (e) {
       print('Error changing password: $e');
-      throw e;
+      rethrow;
     }
   }
 }

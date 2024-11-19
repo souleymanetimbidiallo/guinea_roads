@@ -8,6 +8,8 @@ import 'full_photo_page.dart';
 import 'dart:io';
 
 class ProfilPage extends StatefulWidget {
+  const ProfilPage({super.key});
+
   @override
   _ProfilPageState createState() => _ProfilPageState();
 }
@@ -15,7 +17,7 @@ class ProfilPage extends StatefulWidget {
 final TextEditingController _passwordController = TextEditingController();
 
 class _ProfilPageState extends State<ProfilPage> {
-  ProfilController _controller = ProfilController();
+  final ProfilController _controller = ProfilController();
 
   String? _errorMessage;
   File? _image;
@@ -96,7 +98,7 @@ class _ProfilPageState extends State<ProfilPage> {
           try {
             await _controller.changePassword(newPassword);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Mot de passe modifié avec succès')),
+              const SnackBar(content: Text('Mot de passe modifié avec succès')),
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -105,7 +107,7 @@ class _ProfilPageState extends State<ProfilPage> {
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Les mots de passe ne correspondent pas')),
+            const SnackBar(content: Text('Les mots de passe ne correspondent pas')),
           );
         }
       }
@@ -118,11 +120,11 @@ class _ProfilPageState extends State<ProfilPage> {
       builder: (BuildContext context) {
         String? password;
         return AlertDialog(
-          title: Text('Ancien mot de passe'),
+          title: const Text('Ancien mot de passe'),
           content: TextField(
             obscureText: true,
             onChanged: (value) => password = value,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'Entrez votre ancien mot de passe'),
           ),
           actions: <Widget>[
@@ -130,7 +132,7 @@ class _ProfilPageState extends State<ProfilPage> {
               onPressed: () {
                 Navigator.of(context).pop(password);
               },
-              child: Text('Valider'),
+              child: const Text('Valider'),
             ),
           ],
         );
@@ -151,7 +153,7 @@ class _ProfilPageState extends State<ProfilPage> {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             return AlertDialog(
-              title: Text('Nouveau mot de passe'),
+              title: const Text('Nouveau mot de passe'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -159,10 +161,10 @@ class _ProfilPageState extends State<ProfilPage> {
                     obscureText: true,
                     onChanged: (value) {
                       setState(() {
-                        this._newPassword = value;
+                        _newPassword = value;
                       });
                     },
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                         hintText: 'Entrez votre nouveau mot de passe'),
                   ),
                   TextField(
@@ -172,7 +174,7 @@ class _ProfilPageState extends State<ProfilPage> {
                         _confirmPassword = value;
                       });
                     },
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                         hintText: 'Confirmez votre nouveau mot de passe'),
                   ),
                 ],
@@ -182,14 +184,14 @@ class _ProfilPageState extends State<ProfilPage> {
                   onPressed: () {
                     Navigator.of(context).pop(false);
                   },
-                  child: Text('Annuler'),
+                  child: const Text('Annuler'),
                 ),
                 TextButton(
                   onPressed: () {
                     bool passwordsMatch = _newPassword != null && _confirmPassword != null && _newPassword == _confirmPassword;
                     Navigator.of(context).pop(passwordsMatch);
                   },
-                  child: Text('Confirmer'),
+                  child: const Text('Confirmer'),
                 ),
               ],
             );
@@ -210,27 +212,27 @@ class _ProfilPageState extends State<ProfilPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Confirmation'),
-          content: Text('Voulez-vous vous déconnecter ?'),
+          title: const Text('Confirmation'),
+          content: const Text('Voulez-vous vous déconnecter ?'),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(true);
               },
-              child: Text('Oui'),
+              child: const Text('Oui'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(false);
               },
-              child: Text('Annuler'),
+              child: const Text('Annuler'),
             ),
           ],
         );
       },
     );
 
-    if (confirm != null && confirm) {
+    if (confirm) {
       await _logout();
     }
   }
@@ -267,7 +269,7 @@ class _ProfilPageState extends State<ProfilPage> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('L\'URL de l\'image est invalide')),
+        const SnackBar(content: Text('L\'URL de l\'image est invalide')),
       );
     }
   }
@@ -276,7 +278,7 @@ class _ProfilPageState extends State<ProfilPage> {
   @override
   Widget build(BuildContext context) {
     if (_controller.isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_errorMessage != null) {
@@ -285,12 +287,12 @@ class _ProfilPageState extends State<ProfilPage> {
 
     UserProfile? user = _controller.user;
     if (user == null) {
-      return Center(child: Text('User not found'));
+      return const Center(child: Text('User not found'));
     }
 
     return Scaffold(
         appBar: AppBar(
-        title: Text('Profil'),
+        title: const Text('Profil'),
     ),
     body: SingleChildScrollView(
     padding: const EdgeInsets.all(16.0),
@@ -304,13 +306,13 @@ class _ProfilPageState extends State<ProfilPage> {
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
-                      title: Text('Options de photo'),
+                      title: const Text('Options de photo'),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ListTile(
-                            leading: Icon(Icons.photo),
-                            title: Text('Voir la photo'),
+                            leading: const Icon(Icons.photo),
+                            title: const Text('Voir la photo'),
                             onTap: () {
                               print("Voir la photo tapped");
                               _viewPhoto();
@@ -318,8 +320,8 @@ class _ProfilPageState extends State<ProfilPage> {
 
                           ),
                           ListTile(
-                            leading: Icon(Icons.edit),
-                            title: Text('Modifier la photo'),
+                            leading: const Icon(Icons.edit),
+                            title: const Text('Modifier la photo'),
                             onTap: () {
                               _pickImage();
                               Navigator.pop(context);
@@ -337,57 +339,57 @@ class _ProfilPageState extends State<ProfilPage> {
                     radius: 50,
                     backgroundImage: NetworkImage(user.photoUrl ?? 'https://via.placeholder.com/150'),
                   ),
-                  SizedBox(height: 8), // Espacement entre le cercle de l'image et les options
+                  const SizedBox(height: 8), // Espacement entre le cercle de l'image et les options
                 ],
               ),
             ),
 
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Center(
             child: Text(
               user.name,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           ListTile(
-            leading: Icon(Icons.email),
+            leading: const Icon(Icons.email),
             title: Text(user.email),
           ),
-          ListTile(
+          const ListTile(
             leading: Icon(Icons.history),
             title: Text('Historique des trajets'),
           ),
           ...user.history.map((item) => ListTile(
             title: Text(item),
-            leading: Icon(Icons.trip_origin),
+            leading: const Icon(Icons.trip_origin),
           )),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Card(
             child: ListTile(
               onTap: _updateUserProfile,
-              leading: Icon(Icons.edit),
-              title: Text('Mettre à jour le profil'),
-              trailing: Icon(Icons.arrow_forward),
+              leading: const Icon(Icons.edit),
+              title: const Text('Mettre à jour le profil'),
+              trailing: const Icon(Icons.arrow_forward),
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Card(
             child: ListTile(
               onTap: _changePassword,
-              leading: Icon(Icons.lock),
-              title: Text('Changer le mot de passe'),
-              trailing: Icon(Icons.arrow_forward),
+              leading: const Icon(Icons.lock),
+              title: const Text('Changer le mot de passe'),
+              trailing: const Icon(Icons.arrow_forward),
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Card(
             child: ListTile(
               onTap: _confirmLogout,
-              leading: Icon(Icons.logout),
-              title: Text('Déconnexion'),
-              trailing: Icon(Icons.arrow_forward),
+              leading: const Icon(Icons.logout),
+              title: const Text('Déconnexion'),
+              trailing: const Icon(Icons.arrow_forward),
             ),
           ),
         ],

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:guinea_roads/models/register_model.dart';
 import 'package:guinea_roads/login_page.dart';
 
-import '../login_page.dart';  // Import LoginPage
+// Import LoginPage
 
 class RegisterController {
   final AuthService _authService = AuthService();
@@ -33,11 +33,11 @@ class RegisterController {
       if (user != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
+          MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur d\'inscription')),
+          const SnackBar(content: Text('Erreur d\'inscription')),
         );
       }
     }

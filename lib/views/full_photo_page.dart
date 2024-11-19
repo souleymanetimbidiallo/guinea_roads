@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class FullPhotoPage extends StatelessWidget {
   final String photoUrl;
 
-  FullPhotoPage({required this.photoUrl});
+  const FullPhotoPage({super.key, required this.photoUrl});
 
   @override
   Widget build(BuildContext context) {

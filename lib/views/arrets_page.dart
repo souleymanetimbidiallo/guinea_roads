@@ -4,6 +4,8 @@ import 'package:guinea_roads/controllers/stop_controller.dart';
 import 'package:guinea_roads/views/maps_page.dart';
 
 class ArretsPage extends StatefulWidget {
+  const ArretsPage({super.key});
+
   @override
   _ArretsPageState createState() => _ArretsPageState();
 }
@@ -11,7 +13,7 @@ class ArretsPage extends StatefulWidget {
 class _ArretsPageState extends State<ArretsPage> {
   ArretsController controller = ArretsController();
 
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   List<DocumentSnapshot> _arrets = [];
   List<DocumentSnapshot> _filteredArrets = [];
 
@@ -43,14 +45,14 @@ class _ArretsPageState extends State<ArretsPage> {
     return Scaffold(
       appBar: AppBar(
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(50.0),
+          preferredSize: const Size.fromHeight(50.0),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Rechercher un arrêt...',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30.0),
                 ),
@@ -65,10 +67,10 @@ class _ArretsPageState extends State<ArretsPage> {
         stream: controller.recupererArrets(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Something went wrong'));
+            return const Center(child: Text('Something went wrong'));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           _arrets = snapshot.data!.docs;
@@ -86,21 +88,21 @@ class _ArretsPageState extends State<ArretsPage> {
                   borderRadius: BorderRadius.circular(15.0),
                 ),
                 elevation: 5,
-                margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
+                margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
                 child: ListTile(
-                  leading: CircleAvatar(
+                  leading: const CircleAvatar(
                     backgroundColor: Colors.blueAccent,
                     child: Icon(Icons.directions_bus, color: Colors.white),
                   ),
                   title: Text(
                     data['name'],
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.blueAccent,
                     ),
                   ),
-                  subtitle: Text('Cliquez pour voir sur la carte'),
-                  trailing: Icon(Icons.arrow_forward_ios, color: Colors.blueAccent),
+                  subtitle: const Text('Cliquez pour voir sur la carte'),
+                  trailing: const Icon(Icons.arrow_forward_ios, color: Colors.blueAccent),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
