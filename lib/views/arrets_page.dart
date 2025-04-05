@@ -90,7 +90,7 @@ class _ArretsPageState extends State<ArretsPage> {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: Colors.blueAccent,
-                    child: Icon(Icons.directions_bus, color: Colors.white),
+                    child: Icon(Icons.map_sharp, color: Colors.white),
                   ),
                   title: Text(
                     data['name'],
@@ -99,7 +99,7 @@ class _ArretsPageState extends State<ArretsPage> {
                       color: Colors.blueAccent,
                     ),
                   ),
-                  subtitle: Text('Cliquez pour voir sur la carte'),
+                  subtitle: Text('Choisir cet arrêt comme départ'),
                   trailing: Icon(Icons.arrow_forward_ios, color: Colors.blueAccent),
                   onTap: () => Navigator.push(
                     context,

@@ -56,7 +56,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
 
           BottomNavigationBarItem(
-            icon: Icon(Icons.bus_alert),
+            icon: Icon(Icons.map_sharp),
             label: 'Arrets',
           ),
           BottomNavigationBarItem(
