@@ -52,11 +52,18 @@ class _HomePageState extends State<HomePage> {
     final arrivee = findStopByName(selectedArriveeName ?? '');
 
     if (depart != null && arrivee != null) {
-      setState(() {
-        selectedDepart = depart;
-        selectedArrivee = arrivee;
-        showResult = true;
-      });
+      final trajet = controller.getMultiAxeTrajet(depart, arrivee);
+      if (trajet != null) {
+        setState(() {
+          selectedDepart = depart;
+          selectedArrivee = arrivee;
+          showResult = true;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Aucun itinéraire trouvé.')),
+        );
+      }
     }
   }
 
@@ -88,12 +95,12 @@ class _HomePageState extends State<HomePage> {
     }
 
     final trajet = (selectedDepart != null && selectedArrivee != null)
-        ? controller.getTrajet(selectedDepart!, selectedArrivee!)
+        ? controller.getMultiAxeTrajet(selectedDepart!, selectedArrivee!)
         : null;
 
     return Scaffold(
       appBar: AppBar(title: Text('Guinea Roads')),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
