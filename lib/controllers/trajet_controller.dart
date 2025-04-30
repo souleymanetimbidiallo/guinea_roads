@@ -37,6 +37,57 @@ class TrajetController {
     return Trajet(troncons: tronconsPath);
   }
 
+  int calculerCoutTrajetParModes(Trajet trajet, List<String> modes) {
+    int total = 0;
+    int index = 0;
+    for (final troncon in trajet.troncons) {
+      final mode = index < modes.length ? modes[index] : modes.last;
+      total += troncon.prixParType[mode] ?? 0;
+      index++;
+    }
+    return total;
+  }
+
+  List<Map<String, dynamic>> getSmartMultimodalOptions(Trajet trajet) {
+    List<Map<String, dynamic>> options = [];
+
+    List<String> allModes = ['taxi', 'minibus', 'tricycle'];
+
+    void backtrack(int index, List<Troncon> current, List<String> currentModes) {
+      if (index >= trajet.troncons.length) {
+        options.add({
+          "trajet": Trajet(troncons: [...current]),
+          "modes": [...currentModes]
+        });
+        return;
+      }
+
+      final troncon = trajet.troncons[index];
+
+      for (var mode in allModes) {
+        if ((troncon.prixParType[mode] ?? 0) > 0) {
+          bool canMerge = currentModes.isNotEmpty && currentModes.last == mode;
+
+          if (canMerge) {
+            current.add(troncon);
+            backtrack(index + 1, current, currentModes);
+            current.removeLast();
+          } else {
+            current.add(troncon);
+            currentModes.add(mode);
+            backtrack(index + 1, current, currentModes);
+            current.removeLast();
+            currentModes.removeLast();
+          }
+        }
+      }
+    }
+
+    backtrack(0, [], []);
+
+    return options;
+  }
+
   List<Map<String, dynamic>> getTransportOptionsForTrajet(Trajet trajet) {
     List<Map<String, dynamic>> options = [];
     final modes = ['taxi', 'minibus', 'tricycle'];
@@ -54,17 +105,52 @@ class TrajetController {
     return options;
   }
 
+  List<Map<String, dynamic>> getCombinedTransportOptionsForTrajet(Trajet trajet) {
+    Set<String> allModes = {'taxi', 'minibus', 'tricycle'};
+    Set<String> usedModes = {};
+
+    for (var troncon in trajet.troncons) {
+      for (var mode in allModes) {
+        if ((troncon.prixParType[mode] ?? 0) > 0) {
+          usedModes.add(mode);
+        }
+      }
+    }
+
+    List<Map<String, dynamic>> result = [];
+
+    if (usedModes.length > 1) {
+      result.add({
+        "trajet": trajet,
+        "modes": usedModes.toList()
+      });
+    }
+
+    return result;
+  }
+
   List<Troncon> _rebuildTronconsFromPath(List<String> path) {
     List<Troncon> tronconsPath = [];
     for (int i = 0; i < path.length - 1; i++) {
       final from = path[i];
       final to = path[i + 1];
-      final troncon = allTroncons.firstWhere(
+
+      final original = allTroncons.firstWhere(
             (t) =>
         (t.depart.name.toLowerCase().trim() == from && t.arrivee.name.toLowerCase().trim() == to) ||
             (t.depart.name.toLowerCase().trim() == to && t.arrivee.name.toLowerCase().trim() == from),
         orElse: () => throw Exception('Tronçon manquant entre $from et $to'),
       );
+
+      final troncon = original.depart.name.toLowerCase().trim() == from
+          ? original
+          : Troncon(
+        depart: original.arrivee,
+        arrivee: original.depart,
+        axe: original.axe,
+        prixParType: original.prixParType,
+      );
+
       tronconsPath.add(troncon);
     }
     return tronconsPath;

@@ -134,7 +134,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     }
 
     final axeCount = trajet!.troncons.map((t) => t.axe).toSet().length;
-    final cost = trajet!.getTotalCost(widget.modeTransport);
+    final cost = controller.calculerCoutTrajetParModes(trajet!, [widget.modeTransport]);
     final tronconCount = trajet!.troncons.length;
 
     return Scaffold(
