@@ -39,26 +39,29 @@ class _RecherchePageState extends State<RecherchePage> {
     }
   }
 
-  Widget buildTrajetCard(Trajet trajet, String mode) {
-    Icon icon;
-    switch (mode) {
-      case 'taxi':
-        icon = Icon(Icons.local_taxi, color: Colors.yellow[700]);
-        break;
-      case 'minibus':
-        icon = Icon(Icons.directions_bus, color: Colors.blue);
-        break;
-      case 'tricycle':
-        icon = Icon(Icons.electric_rickshaw, color: Colors.green);
-        break;
-      default:
-        icon = Icon(Icons.directions, color: Colors.grey);
+  Widget buildTrajetCard(Trajet trajet, List<String> modes) {
+    List<Icon> icons = modes.map((mode) {
+      switch (mode) {
+        case 'taxi':
+          return Icon(Icons.local_taxi, color: Colors.yellow[700]);
+        case 'minibus':
+          return Icon(Icons.directions_bus, color: Colors.blue);
+        case 'tricycle':
+          return Icon(Icons.electric_rickshaw, color: Colors.green);
+        default:
+          return Icon(Icons.directions, color: Colors.grey);
+      }
+    }).toList();
+
+    int totalCost = 0;
+    for (var mode in modes) {
+      totalCost += trajet.getTotalCost(mode);
     }
 
     return Card(
       child: ListTile(
-        title: Text('$mode - ${trajet.troncons.length} tronçons'),
-        subtitle: Row(children: [icon, SizedBox(width: 10), Text('${trajet.getTotalCost(mode)} GNF')]),
+        title: Text('${modes.map((m) => m.toUpperCase()).join(" + ")} - ${trajet.troncons.length} tronçons'),
+        subtitle: Row(children: [...icons, SizedBox(width: 10), Text('$totalCost GNF')]),
         trailing: Icon(Icons.arrow_forward_ios),
         onTap: () {
           final depart = findStopByName(selectedDepartName ?? '');
@@ -70,7 +73,7 @@ class _RecherchePageState extends State<RecherchePage> {
                 builder: (_) => TrajetResultPage(
                   depart: depart,
                   arrivee: arrivee,
-                  modeTransport: mode,
+                  modeTransport: modes.first,
                 ),
               ),
             );
@@ -86,9 +89,14 @@ class _RecherchePageState extends State<RecherchePage> {
     if (depart != null && arrivee != null) {
       final trajet = controller.getMultiAxeTrajet(depart, arrivee);
       if (trajet != null) {
-        final options = controller.getTransportOptionsForTrajet(trajet);
+        final unique = controller.getTransportOptionsForTrajet(trajet);
+        final combines = controller.getCombinedTransportOptionsForTrajet(trajet);
+
         setState(() {
-          trajetVariants = options;
+          trajetVariants = [
+            ...unique.map((t) => {"trajet": t["trajet"], "modes": [t["mode"]]}),
+            ...combines
+          ];
         });
       } else {
         setState(() => trajetVariants = []);
@@ -98,6 +106,14 @@ class _RecherchePageState extends State<RecherchePage> {
         SnackBar(content: Text('Veuillez sélectionner les deux arrêts')),
       );
     }
+  }
+
+  void swapStops() {
+    setState(() {
+      final temp = selectedDepartName;
+      selectedDepartName = selectedArriveeName;
+      selectedArriveeName = temp;
+    });
   }
 
   @override
@@ -139,6 +155,12 @@ class _RecherchePageState extends State<RecherchePage> {
               },
             ),
             SizedBox(height: 10),
+            IconButton(
+              icon: Icon(Icons.swap_vert, size: 28),
+              tooltip: 'Inverser les arrêts',
+              onPressed: swapStops,
+            ),
+            SizedBox(height: 10),
             Autocomplete<String>(
               optionsBuilder: (TextEditingValue value) {
                 return allStops
@@ -178,7 +200,7 @@ class _RecherchePageState extends State<RecherchePage> {
                   ? Text("Aucun trajet trouvé")
                   : ListView(
                 children: trajetVariants
-                    .map((item) => buildTrajetCard(item["trajet"], item["mode"]))
+                    .map((item) => buildTrajetCard(item["trajet"], List<String>.from(item["modes"])))
                     .toList(),
               ),
             ),

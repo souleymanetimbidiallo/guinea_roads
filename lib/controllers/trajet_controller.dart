@@ -54,21 +54,58 @@ class TrajetController {
     return options;
   }
 
+  List<Map<String, dynamic>> getCombinedTransportOptionsForTrajet(Trajet trajet) {
+    Set<String> allModes = {'taxi', 'minibus', 'tricycle'};
+    Set<String> usedModes = {};
+
+    for (var troncon in trajet.troncons) {
+      for (var mode in allModes) {
+        if ((troncon.prixParType[mode] ?? 0) > 0) {
+          usedModes.add(mode);
+        }
+      }
+    }
+
+    List<Map<String, dynamic>> result = [];
+
+    if (usedModes.length > 1) {
+      result.add({
+        "trajet": trajet,
+        "modes": usedModes.toList()
+      });
+    }
+
+    return result;
+  }
+
   List<Troncon> _rebuildTronconsFromPath(List<String> path) {
     List<Troncon> tronconsPath = [];
     for (int i = 0; i < path.length - 1; i++) {
       final from = path[i];
       final to = path[i + 1];
-      final troncon = allTroncons.firstWhere(
+
+      final original = allTroncons.firstWhere(
             (t) =>
         (t.depart.name.toLowerCase().trim() == from && t.arrivee.name.toLowerCase().trim() == to) ||
             (t.depart.name.toLowerCase().trim() == to && t.arrivee.name.toLowerCase().trim() == from),
         orElse: () => throw Exception('Tronçon manquant entre $from et $to'),
       );
+
+      // force le sens du tronçon dans le bon ordre
+      final troncon = original.depart.name.toLowerCase().trim() == from
+          ? original
+          : Troncon(
+        depart: original.arrivee,
+        arrivee: original.depart,
+        axe: original.axe,
+        prixParType: original.prixParType,
+      );
+
       tronconsPath.add(troncon);
     }
     return tronconsPath;
   }
+
 
   Map<String, List<String>> _buildGraph() {
     Map<String, List<String>> graph = {};
