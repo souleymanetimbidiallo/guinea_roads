@@ -7,7 +7,19 @@ class GuineaRoadsApp extends StatelessWidget {
     return MaterialApp(
       title: 'Guinea Roads',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        brightness: Brightness.light, // Mode clair
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark, // Mode sombre automatique
+        primarySwatch: Colors.blueGrey,
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.black87,
+        ),
+      ),
+      themeMode: ThemeMode.system, // 🔥 Bascule automatiquement selon le téléphone
       home: SplashScreen(),
     );
   }

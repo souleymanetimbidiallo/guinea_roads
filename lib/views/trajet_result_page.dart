@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:guinea_roads/services/historique_service.dart';
 import '../models/stop.dart';
 import '../controllers/trajet_controller.dart';
 import '../models/trajet.dart';
@@ -27,29 +26,14 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   }
 
   Future<void> loadData() async {
-    setState(() {
-      isLoading = true;
-    });
-
+    setState(() => isLoading = true);
     await controller.loadTronconsFromFirestore();
     final result = controller.getMultiAxeTrajet(widget.depart, widget.arrivee);
-
     setState(() {
       trajet = result;
       isLoading = false;
     });
-
-    if (result != null) {
-      Future.delayed(Duration(milliseconds: 300), () async {
-        print('📝 Ajout dans historique : ${widget.depart.name} -> ${widget.arrivee.name}');
-        await HistoriqueService.ajouterTrajet(widget.depart.name, widget.arrivee.name);
-      });
-    }
   }
-
-
-
-
 
   List<Widget> _buildTrajetCards(Trajet trajet) {
     List<Widget> widgets = [];
@@ -60,9 +44,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       if (currentList.isNotEmpty && currentAxe != null) {
         widgets.add(
           Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             elevation: 5,
             margin: EdgeInsets.symmetric(vertical: 10),
             child: Padding(
@@ -70,10 +52,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Axe : $currentAxe',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-                  ),
+                  Text('Axe : $currentAxe', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
                   SizedBox(height: 10),
                   ...currentList,
                 ],
@@ -96,8 +75,44 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       ));
     }
     pushCurrentCard();
-
     return widgets;
+  }
+
+  Widget _buildCoutSection(Trajet trajet) {
+    final couts = trajet.getTotalCosts();
+    final List<Widget> widgets = [];
+
+    if (couts["taxi"] != null && couts["taxi"]! > 0) {
+      widgets.add(Column(
+        children: [
+          Icon(Icons.local_taxi, color: Colors.yellow[700]),
+          Text('${couts["taxi"]} GNF'),
+        ],
+      ));
+    }
+
+    if (couts["minibus"] != null && couts["minibus"]! > 0) {
+      widgets.add(Column(
+        children: [
+          Icon(Icons.directions_bus, color: Colors.blue),
+          Text('${couts["minibus"]} GNF'),
+        ],
+      ));
+    }
+
+    if (couts["tricycle"] != null && couts["tricycle"]! > 0) {
+      widgets.add(Column(
+        children: [
+          Icon(Icons.electric_rickshaw, color: Colors.green),
+          Text('${couts["tricycle"]} GNF'),
+        ],
+      ));
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: widgets,
+    );
   }
 
   @override
@@ -123,42 +138,13 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'De ${widget.depart.name} à ${widget.arrivee.name}',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
+            Text('De ${widget.depart.name} à ${widget.arrivee.name}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             SizedBox(height: 20),
-            Expanded(
-              child: ListView(
-                children: _buildTrajetCards(trajet!),
-              ),
-            ),
+            Expanded(child: ListView(children: _buildTrajetCards(trajet!))),
             SizedBox(height: 20),
             Text('Coûts estimés :', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Column(
-                  children: [
-                    Icon(Icons.local_taxi, color: Colors.yellow[700]),
-                    Text('${trajet!.getTotalCost("taxi")} GNF'),
-                  ],
-                ),
-                Column(
-                  children: [
-                    Icon(Icons.directions_bus, color: Colors.blue),
-                    Text('${trajet!.getTotalCost("minibus")} GNF'),
-                  ],
-                ),
-                Column(
-                  children: [
-                    Icon(Icons.electric_rickshaw, color: Colors.green),
-                    Text('${trajet!.getTotalCost("tricycle")} GNF'),
-                  ],
-                ),
-              ],
-            ),
+            _buildCoutSection(trajet!),
             SizedBox(height: 20),
             ElevatedButton.icon(
               icon: Icon(Icons.map),
@@ -173,10 +159,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => TrajetMapPage(
-                      arrets: trajet!.troncons
-                          .map((t) => t.depart)
-                          .followedBy([trajet!.troncons.last.arrivee])
-                          .toList(),
+                      arrets: trajet!.troncons.map((t) => t.depart).followedBy([trajet!.troncons.last.arrivee]).toList(),
                       title: '${widget.depart.name} → ${widget.arrivee.name}',
                     ),
                   ),

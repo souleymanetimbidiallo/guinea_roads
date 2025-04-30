@@ -25,6 +25,8 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   final String googleApiKey = 'AIzaSyAkxWY7GjJGgARoAbD1DZlpFNSaJPsQQrY';
   LatLngBounds? trajetBounds;
 
+  bool trajetsCharges = false; // nouveau flag
+
   @override
   void initState() {
     super.initState();
@@ -51,8 +53,17 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
 
     trajetBounds = _calculateBounds(latLngs);
 
-    await _loadPolylineFromGoogle(widget.arrets);
-    setState(() {});
+    try {
+      await _loadPolylineFromGoogle(widget.arrets);
+      setState(() {
+        trajetsCharges = true;
+      });
+    } catch (e) {
+      print('🚫 Impossible de charger les trajets, connexion ? $e');
+      setState(() {
+        trajetsCharges = false;
+      });
+    }
   }
 
   Future<void> _loadPolylineFromGoogle(List<Stop> stops) async {
@@ -71,12 +82,10 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       );
 
       if (result.points.isNotEmpty) {
-        final color = _getColorForAxe(stop1.axe);
-
         polylines.add(Polyline(
           polylineId: PolylineId('$i'),
           points: result.points.map((p) => LatLng(p.latitude, p.longitude)).toList(),
-          color: color,
+          color: Colors.blueAccent,
           width: 5,
         ));
       }
@@ -95,17 +104,6 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       southwest: LatLng(minLat!, minLng!),
       northeast: LatLng(maxLat!, maxLng!),
     );
-  }
-
-  Color _getColorForAxe(String axe) {
-    switch (axe.toLowerCase()) {
-      case 'corniche nord':
-        return Colors.blue;
-      case 'le prince':
-        return Colors.green;
-      default:
-        return Colors.deepPurple;
-    }
   }
 
   void _centrerSurTrajet() {
@@ -131,7 +129,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
             onMapCreated: (controller) => mapController = controller,
             initialCameraPosition: initialPosition,
             markers: markers,
-            polylines: polylines,
+            polylines: trajetsCharges ? polylines : {}, // ➔ seulement si trajets chargés
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
           ),
@@ -141,7 +139,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
             child: FloatingActionButton(
               onPressed: _centrerSurTrajet,
               child: Icon(Icons.center_focus_strong),
-              tooltip: "Centrer sur l'itinéraire",
+              tooltip: "Centrer sur la carte",
               mini: true,
             ),
           ),

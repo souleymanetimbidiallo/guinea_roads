@@ -39,4 +39,13 @@ class Troncon {
       prixParType: Map<String, int>.from(data['prixParType']),
     );
   }
+
+  factory Troncon.fromJson(Map<String, dynamic> json) {
+    return Troncon(
+      depart: Stop.fromJson(json['depart']),
+      arrivee: Stop.fromJson(json['arrivee']),
+      axe: json['axe'],
+      prixParType: Map<String, int>.from(json['prixParType']),
+    );
+  }
 }
