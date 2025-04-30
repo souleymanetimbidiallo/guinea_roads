@@ -14,4 +14,15 @@ class Stop {
     required this.order,
     required this.axe,
   });
+
+  factory Stop.fromJson(Map<String, dynamic> json) {
+    return Stop(
+      id: json['id'],
+      name: json['name'],
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      order: json['order'],
+      axe: json['axe'],
+    );
+  }
 }

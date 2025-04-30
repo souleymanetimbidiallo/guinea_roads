@@ -1,4 +1,3 @@
-// lib/views/trajet_map_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -24,6 +23,9 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   final Set<Polyline> polylines = {};
 
   final String googleApiKey = 'AIzaSyAkxWY7GjJGgARoAbD1DZlpFNSaJPsQQrY';
+  LatLngBounds? trajetBounds;
+
+  bool trajetsCharges = false; // nouveau flag
 
   @override
   void initState() {
@@ -31,73 +33,117 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _setupMap());
   }
 
-  void _setupMap() async {
+  Future<void> _setupMap() async {
     if (widget.arrets.isEmpty) return;
 
+    List<LatLng> latLngs = [];
+
     for (var stop in widget.arrets) {
+      final latLng = LatLng(stop.latitude, stop.longitude);
+      latLngs.add(latLng);
+
       markers.add(
         Marker(
           markerId: MarkerId(stop.name),
-          position: LatLng(stop.latitude, stop.longitude),
+          position: latLng,
           infoWindow: InfoWindow(title: stop.name),
         ),
       );
     }
 
-    await _loadPolylineFromGoogle(widget.arrets);
-    setState(() {});
+    trajetBounds = _calculateBounds(latLngs);
+
+    try {
+      await _loadPolylineFromGoogle(widget.arrets);
+      setState(() {
+        trajetsCharges = true;
+      });
+    } catch (e) {
+      print('🚫 Impossible de charger les trajets, connexion ? $e');
+      setState(() {
+        trajetsCharges = false;
+      });
+    }
   }
 
   Future<void> _loadPolylineFromGoogle(List<Stop> stops) async {
     if (stops.length < 2) return;
 
     PolylinePoints polylinePoints = PolylinePoints();
-    List<LatLng> fullPath = [];
-
     for (int i = 0; i < stops.length - 1; i++) {
+      final stop1 = stops[i];
+      final stop2 = stops[i + 1];
+
       final result = await polylinePoints.getRouteBetweenCoordinates(
         googleApiKey,
-        PointLatLng(stops[i].latitude, stops[i].longitude),
-        PointLatLng(stops[i + 1].latitude, stops[i + 1].longitude),
+        PointLatLng(stop1.latitude, stop1.longitude),
+        PointLatLng(stop2.latitude, stop2.longitude),
         travelMode: TravelMode.driving,
       );
 
       if (result.points.isNotEmpty) {
-        fullPath.addAll(result.points.map(
-              (p) => LatLng(p.latitude, p.longitude),
+        polylines.add(Polyline(
+          polylineId: PolylineId('$i'),
+          points: result.points.map((p) => LatLng(p.latitude, p.longitude)).toList(),
+          color: Colors.blueAccent,
+          width: 5,
         ));
       }
     }
+  }
 
-    polylines.add(Polyline(
-      polylineId: PolylineId('real_path'),
-      points: fullPath,
-      color: Colors.deepPurple,
-      width: 5,
-    ));
+  LatLngBounds _calculateBounds(List<LatLng> points) {
+    double? minLat, maxLat, minLng, maxLng;
+    for (var p in points) {
+      if (minLat == null || p.latitude < minLat) minLat = p.latitude;
+      if (maxLat == null || p.latitude > maxLat) maxLat = p.latitude;
+      if (minLng == null || p.longitude < minLng) minLng = p.longitude;
+      if (maxLng == null || p.longitude > maxLng) maxLng = p.longitude;
+    }
+    return LatLngBounds(
+      southwest: LatLng(minLat!, minLng!),
+      northeast: LatLng(maxLat!, maxLng!),
+    );
+  }
+
+  void _centrerSurTrajet() {
+    if (trajetBounds != null) {
+      mapController.animateCamera(CameraUpdate.newLatLngBounds(trajetBounds!, 50));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final initialPosition = widget.arrets.isNotEmpty
         ? CameraPosition(
-      target: LatLng(
-        widget.arrets.first.latitude,
-        widget.arrets.first.longitude,
-      ),
+      target: LatLng(widget.arrets.first.latitude, widget.arrets.first.longitude),
       zoom: 13,
     )
         : CameraPosition(target: LatLng(9.65, -13.60), zoom: 12);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: GoogleMap(
-        onMapCreated: (controller) => mapController = controller,
-        initialCameraPosition: initialPosition,
-        markers: markers,
-        polylines: polylines,
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
+      body: Stack(
+        children: [
+          GoogleMap(
+            onMapCreated: (controller) => mapController = controller,
+            initialCameraPosition: initialPosition,
+            markers: markers,
+            polylines: trajetsCharges ? polylines : {}, // ➔ seulement si trajets chargés
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+          ),
+          Positioned(
+            bottom: 80,
+            left: 16,
+            child: FloatingActionButton(
+              onPressed: _centrerSurTrajet,
+              child: Icon(Icons.center_focus_strong),
+              tooltip: "Centrer sur la carte",
+              mini: true,
+            ),
+          ),
+        ],
       ),
     );
   }
