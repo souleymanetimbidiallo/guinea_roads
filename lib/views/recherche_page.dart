@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:guinea_roads/views/trajet_result_page.dart';
-import '../controllers/trajet_controller.dart';
 import '../models/stop.dart';
+import '../controllers/trajet_controller.dart';
+import '../models/trajet.dart';
+import 'trajet_result_page.dart';
 
 class RecherchePage extends StatefulWidget {
   @override
@@ -14,6 +15,7 @@ class _RecherchePageState extends State<RecherchePage> {
   List<Stop> allStops = [];
   String? selectedDepartName;
   String? selectedArriveeName;
+  List<Map<String, dynamic>> trajetVariants = [];
 
   @override
   void initState() {
@@ -37,12 +39,65 @@ class _RecherchePageState extends State<RecherchePage> {
     }
   }
 
-  void swapStops() {
-    setState(() {
-      final temp = selectedDepartName;
-      selectedDepartName = selectedArriveeName;
-      selectedArriveeName = temp;
-    });
+  Widget buildTrajetCard(Trajet trajet, String mode) {
+    Icon icon;
+    switch (mode) {
+      case 'taxi':
+        icon = Icon(Icons.local_taxi, color: Colors.yellow[700]);
+        break;
+      case 'minibus':
+        icon = Icon(Icons.directions_bus, color: Colors.blue);
+        break;
+      case 'tricycle':
+        icon = Icon(Icons.electric_rickshaw, color: Colors.green);
+        break;
+      default:
+        icon = Icon(Icons.directions, color: Colors.grey);
+    }
+
+    return Card(
+      child: ListTile(
+        title: Text('$mode - ${trajet.troncons.length} tronçons'),
+        subtitle: Row(children: [icon, SizedBox(width: 10), Text('${trajet.getTotalCost(mode)} GNF')]),
+        trailing: Icon(Icons.arrow_forward_ios),
+        onTap: () {
+          final depart = findStopByName(selectedDepartName ?? '');
+          final arrivee = findStopByName(selectedArriveeName ?? '');
+          if (depart != null && arrivee != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TrajetResultPage(
+                  depart: depart,
+                  arrivee: arrivee,
+                  modeTransport: mode,
+                ),
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  void chercherTrajets() {
+    final depart = findStopByName(selectedDepartName ?? '');
+    final arrivee = findStopByName(selectedArriveeName ?? '');
+    if (depart != null && arrivee != null) {
+      final trajet = controller.getMultiAxeTrajet(depart, arrivee);
+      if (trajet != null) {
+        final options = controller.getTransportOptionsForTrajet(trajet);
+        setState(() {
+          trajetVariants = options;
+        });
+      } else {
+        setState(() => trajetVariants = []);
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner les deux arrêts')),
+      );
+    }
   }
 
   @override
@@ -68,9 +123,7 @@ class _RecherchePageState extends State<RecherchePage> {
                     .toList();
               },
               onSelected: (value) {
-                setState(() {
-                  selectedDepartName = value;
-                });
+                setState(() => selectedDepartName = value);
               },
               fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
                 controller.text = selectedDepartName ?? '';
@@ -86,11 +139,6 @@ class _RecherchePageState extends State<RecherchePage> {
               },
             ),
             SizedBox(height: 10),
-            IconButton(
-              icon: Icon(Icons.swap_vert, size: 30),
-              onPressed: swapStops,
-            ),
-            SizedBox(height: 10),
             Autocomplete<String>(
               optionsBuilder: (TextEditingValue value) {
                 return allStops
@@ -99,9 +147,7 @@ class _RecherchePageState extends State<RecherchePage> {
                     .toList();
               },
               onSelected: (value) {
-                setState(() {
-                  selectedArriveeName = value;
-                });
+                setState(() => selectedArriveeName = value);
               },
               fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
                 controller.text = selectedArriveeName ?? '';
@@ -119,27 +165,22 @@ class _RecherchePageState extends State<RecherchePage> {
             SizedBox(height: 20),
             ElevatedButton.icon(
               icon: Icon(Icons.search),
-              label: Text("Rechercher le trajet"),
+              label: Text("Rechercher les trajets"),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 textStyle: TextStyle(fontSize: 18),
               ),
-              onPressed: () {
-                final depart = findStopByName(selectedDepartName ?? '');
-                final arrivee = findStopByName(selectedArriveeName ?? '');
-                if (depart != null && arrivee != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TrajetResultPage(depart: depart, arrivee: arrivee),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Veuillez sélectionner les deux arrêts')),
-                  );
-                }
-              },
+              onPressed: chercherTrajets,
+            ),
+            SizedBox(height: 20),
+            Expanded(
+              child: trajetVariants.isEmpty
+                  ? Text("Aucun trajet trouvé")
+                  : ListView(
+                children: trajetVariants
+                    .map((item) => buildTrajetCard(item["trajet"], item["mode"]))
+                    .toList(),
+              ),
             ),
           ],
         ),

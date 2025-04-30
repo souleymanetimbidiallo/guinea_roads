@@ -33,6 +33,28 @@ class TrajetController {
       return null;
     }
 
+    List<Troncon> tronconsPath = _rebuildTronconsFromPath(path);
+    return Trajet(troncons: tronconsPath);
+  }
+
+  List<Map<String, dynamic>> getTransportOptionsForTrajet(Trajet trajet) {
+    List<Map<String, dynamic>> options = [];
+    final modes = ['taxi', 'minibus', 'tricycle'];
+
+    for (final mode in modes) {
+      final isAvailable = trajet.troncons.every((t) => (t.prixParType[mode] ?? 0) > 0);
+      if (isAvailable) {
+        options.add({
+          "trajet": trajet,
+          "mode": mode
+        });
+      }
+    }
+
+    return options;
+  }
+
+  List<Troncon> _rebuildTronconsFromPath(List<String> path) {
     List<Troncon> tronconsPath = [];
     for (int i = 0; i < path.length - 1; i++) {
       final from = path[i];
@@ -45,9 +67,7 @@ class TrajetController {
       );
       tronconsPath.add(troncon);
     }
-
-    print('✅ Trajet trouvé entre ${depart.name} et ${arrivee.name} : ${tronconsPath.length} tronçons');
-    return Trajet(troncons: tronconsPath);
+    return tronconsPath;
   }
 
   Map<String, List<String>> _buildGraph() {

@@ -7,8 +7,14 @@ import 'trajet_map_page.dart';
 class TrajetResultPage extends StatefulWidget {
   final Stop depart;
   final Stop arrivee;
+  final String modeTransport;
 
-  const TrajetResultPage({required this.depart, required this.arrivee, Key? key}) : super(key: key);
+  const TrajetResultPage({
+    required this.depart,
+    required this.arrivee,
+    required this.modeTransport,
+    Key? key,
+  }) : super(key: key);
 
   @override
   _TrajetResultPageState createState() => _TrajetResultPageState();
@@ -78,40 +84,36 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     return widgets;
   }
 
-  Widget _buildCoutSection(Trajet trajet) {
-    final couts = trajet.getTotalCosts();
-    final List<Widget> widgets = [];
-
-    if (couts["taxi"] != null && couts["taxi"]! > 0) {
-      widgets.add(Column(
-        children: [
-          Icon(Icons.local_taxi, color: Colors.yellow[700]),
-          Text('${couts["taxi"]} GNF'),
-        ],
-      ));
+  Widget _buildModeInfo(String mode, int cost, int troncons) {
+    Icon icon;
+    int temps = 0;
+    switch (mode) {
+      case 'taxi':
+        icon = Icon(Icons.local_taxi, color: Colors.yellow[700]);
+        temps = 2;
+        break;
+      case 'minibus':
+        icon = Icon(Icons.directions_bus, color: Colors.blue);
+        temps = 5;
+        break;
+      case 'tricycle':
+        icon = Icon(Icons.electric_rickshaw, color: Colors.green);
+        temps = 3;
+        break;
+      default:
+        icon = Icon(Icons.directions, color: Colors.grey);
+        temps = 4;
     }
 
-    if (couts["minibus"] != null && couts["minibus"]! > 0) {
-      widgets.add(Column(
-        children: [
-          Icon(Icons.directions_bus, color: Colors.blue),
-          Text('${couts["minibus"]} GNF'),
-        ],
-      ));
-    }
-
-    if (couts["tricycle"] != null && couts["tricycle"]! > 0) {
-      widgets.add(Column(
-        children: [
-          Icon(Icons.electric_rickshaw, color: Colors.green),
-          Text('${couts["tricycle"]} GNF'),
-        ],
-      ));
-    }
+    final dureeEstimee = troncons * temps;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: widgets,
+      children: [
+        icon,
+        Text(' ${mode.toUpperCase()} - $cost GNF'),
+        Text('⏱️ ~${dureeEstimee} min'),
+      ],
     );
   }
 
@@ -131,6 +133,10 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       );
     }
 
+    final axeCount = trajet!.troncons.map((t) => t.axe).toSet().length;
+    final cost = trajet!.getTotalCost(widget.modeTransport);
+    final tronconCount = trajet!.troncons.length;
+
     return Scaffold(
       appBar: AppBar(title: Text('Itinéraire')),
       body: Padding(
@@ -139,35 +145,29 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('De ${widget.depart.name} à ${widget.arrivee.name}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Text(axeCount > 1 ? '🔁 Ce trajet change d\'axe' : '✔️ Trajet sur un seul axe'),
+            SizedBox(height: 20),
+            _buildModeInfo(widget.modeTransport, cost, tronconCount),
             SizedBox(height: 20),
             Expanded(child: ListView(children: _buildTrajetCards(trajet!))),
-            SizedBox(height: 20),
-            Text('Coûts estimés :', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            SizedBox(height: 10),
-            _buildCoutSection(trajet!),
-            SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: Icon(Icons.map),
-              label: Text('Voir sur la carte'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                textStyle: TextStyle(fontSize: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TrajetMapPage(
-                      arrets: trajet!.troncons.map((t) => t.depart).followedBy([trajet!.troncons.last.arrivee]).toList(),
-                      title: '${widget.depart.name} → ${widget.arrivee.name}',
-                    ),
-                  ),
-                );
-              },
-            ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: Icon(Icons.map),
+        label: Text('Carte'),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TrajetMapPage(
+                arrets: trajet!.troncons.map((t) => t.depart).followedBy([trajet!.troncons.last.arrivee]).toList(),
+                title: '${widget.depart.name} → ${widget.arrivee.name}',
+              ),
+            ),
+          );
+        },
       ),
     );
   }
