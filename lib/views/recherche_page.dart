@@ -39,7 +39,7 @@ class _RecherchePageState extends State<RecherchePage> {
     }
   }
 
-  Widget buildTrajetCard(Trajet trajet, List<String> modes) {
+  Widget buildTrajetCard(Trajet trajet, List<String> modes, double distance, double duration) {
     List<Icon> icons = modes.map((mode) {
       switch (mode) {
         case 'taxi':
@@ -53,12 +53,22 @@ class _RecherchePageState extends State<RecherchePage> {
       }
     }).toList();
 
-    int totalCost = controller.calculerCoutTrajetParModes(trajet, modes);
+    int totalCost = 0;
+    for (var mode in modes) {
+      totalCost += trajet.getTotalCost(mode);
+    }
 
     return Card(
       child: ListTile(
         title: Text('${modes.map((m) => m.toUpperCase()).join(" + ")} - ${trajet.troncons.length} tronçons'),
-        subtitle: Row(children: [...icons, SizedBox(width: 10), Text('$totalCost GNF')]),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [...icons, SizedBox(width: 10), Text('$totalCost GNF')]),
+            SizedBox(height: 5),
+            Text('📍 ${distance.toStringAsFixed(1)} km   ⏱️ ${duration.toStringAsFixed(0)} min'),
+          ],
+        ),
         trailing: Icon(Icons.arrow_forward_ios),
         onTap: () {
           final depart = findStopByName(selectedDepartName ?? '');
@@ -70,7 +80,7 @@ class _RecherchePageState extends State<RecherchePage> {
                 builder: (_) => TrajetResultPage(
                   depart: depart,
                   arrivee: arrivee,
-                  modeTransport: modes.first,
+                  modes: modes,
                 ),
               ),
             );
@@ -80,15 +90,31 @@ class _RecherchePageState extends State<RecherchePage> {
     );
   }
 
-  void chercherTrajets() {
+  Future<void> chercherTrajets() async {
     final depart = findStopByName(selectedDepartName ?? '');
     final arrivee = findStopByName(selectedArriveeName ?? '');
     if (depart != null && arrivee != null) {
       final trajet = controller.getMultiAxeTrajet(depart, arrivee);
       if (trajet != null) {
-        final smartCombos = controller.getSmartMultimodalOptions(trajet);
+        final unique = controller.getTransportOptionsForTrajet(trajet);
+        final combines = controller.getCombinedTransportOptionsForTrajet(trajet);
+        final metrics = await controller.getDistanceAndDuration(trajet);
+
         setState(() {
-          trajetVariants = smartCombos;
+          trajetVariants = [
+            ...unique.map((t) => {
+              "trajet": t["trajet"],
+              "modes": [t["mode"]],
+              "distance": metrics['distance'],
+              "duration": metrics['duration']
+            }),
+            ...combines.map((c) => {
+              "trajet": c["trajet"],
+              "modes": c["modes"],
+              "distance": metrics['distance'],
+              "duration": metrics['duration']
+            })
+          ];
         });
       } else {
         setState(() => trajetVariants = []);
@@ -98,14 +124,6 @@ class _RecherchePageState extends State<RecherchePage> {
         SnackBar(content: Text('Veuillez sélectionner les deux arrêts')),
       );
     }
-  }
-
-  void swapStops() {
-    setState(() {
-      final temp = selectedDepartName;
-      selectedDepartName = selectedArriveeName;
-      selectedArriveeName = temp;
-    });
   }
 
   @override
@@ -150,7 +168,13 @@ class _RecherchePageState extends State<RecherchePage> {
             IconButton(
               icon: Icon(Icons.swap_vert, size: 28),
               tooltip: 'Inverser les arrêts',
-              onPressed: swapStops,
+              onPressed: () {
+                setState(() {
+                  final temp = selectedDepartName;
+                  selectedDepartName = selectedArriveeName;
+                  selectedArriveeName = temp;
+                });
+              },
             ),
             SizedBox(height: 10),
             Autocomplete<String>(
@@ -192,7 +216,12 @@ class _RecherchePageState extends State<RecherchePage> {
                   ? Text("Aucun trajet trouvé")
                   : ListView(
                 children: trajetVariants
-                    .map((item) => buildTrajetCard(item["trajet"], List<String>.from(item["modes"])))
+                    .map((item) => buildTrajetCard(
+                  item["trajet"],
+                  List<String>.from(item["modes"]),
+                  item['distance'] ?? 0,
+                  item['duration'] ?? 0,
+                ))
                     .toList(),
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../models/trajet.dart';
@@ -47,6 +48,8 @@ class TrajetController {
     }
     return total;
   }
+
+
 
   List<Map<String, dynamic>> getSmartMultimodalOptions(Trajet trajet) {
     List<Map<String, dynamic>> options = [];
@@ -204,5 +207,36 @@ class TrajetController {
       stopsSet[troncon.arrivee.name.toLowerCase().trim()] = troncon.arrivee;
     }
     return stopsSet.values.toList();
+  }
+
+  Future<Map<String, double>> getDistanceAndDuration(Trajet trajet) async {
+    double totalDistance = 0;
+    double totalDuration = 0;
+
+    for (final troncon in trajet.troncons) {
+      final d = await _fetchDistanceAndDuration(troncon.depart, troncon.arrivee);
+      totalDistance += d['distance']!;
+      totalDuration += d['duration']!;
+    }
+
+    return {
+      'distance': totalDistance,
+      'duration': totalDuration,
+    };
+  }
+
+  Future<Map<String, double>> _fetchDistanceAndDuration(Stop from, Stop to) async {
+    final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/directions/json?origin=${from.latitude},${from.longitude}&destination=${to.latitude},${to.longitude}&key=AIzaSyAkxWY7GjJGgARoAbD1DZlpFNSaJPsQQrY');
+    final response = await http.get(url);
+    final data = json.decode(response.body);
+
+    if (data['routes'] != null && data['routes'].isNotEmpty) {
+      final leg = data['routes'][0]['legs'][0];
+      final dist = leg['distance']['value'] / 1000.0;
+      final dur = leg['duration']['value'] / 60.0;
+      return {'distance': dist, 'duration': dur};
+    }
+    return {'distance': 0, 'duration': 0};
   }
 }
