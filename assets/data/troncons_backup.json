@@ -82,7 +82,7 @@
     },
     "arrivee": {
       "id": "5",
-      "name": "Sonfonia Gare",
+      "name": "Sonfonia T7",
       "latitude": 9.669334,
       "longitude": -13.558108,
       "order": 4,
@@ -225,8 +225,8 @@
       "axe": "Le Prince"
     },
     "arrivee": {
-      "id": "sonfonia_gare",
-      "name": "Sonfonia Gare",
+      "id": "sonfonia_t7",
+      "name": "Sonfonia T7",
       "latitude": 9.669334,
       "longitude": -13.558108,
       "order": 6,
@@ -241,8 +241,8 @@
   },
   {
     "depart": {
-      "id": "sonfonia_gare",
-      "name": "Sonfonia Gare",
+      "id": "sonfonia_t7",
+      "name": "Sonfonia T7",
       "latitude": 9.669334,
       "longitude": -13.558108,
       "order": 6,

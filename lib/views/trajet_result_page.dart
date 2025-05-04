@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import '../models/stop.dart';
 import '../controllers/trajet_controller.dart';
 import '../models/trajet.dart';
+import '../models/troncon.dart';
 import 'trajet_map_page.dart';
 
 class TrajetResultPage extends StatefulWidget {
   final Stop depart;
   final Stop arrivee;
+  final List<String> modes;
 
-  const TrajetResultPage({required this.depart, required this.arrivee, Key? key}) : super(key: key);
+  const TrajetResultPage({
+    required this.depart,
+    required this.arrivee,
+    required this.modes,
+    Key? key,
+  }) : super(key: key);
 
   @override
   _TrajetResultPageState createState() => _TrajetResultPageState();
@@ -18,6 +25,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   final TrajetController controller = TrajetController();
   Trajet? trajet;
   bool isLoading = true;
+  double distance = 0;
+  double duration = 0;
 
   @override
   void initState() {
@@ -29,10 +38,19 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     setState(() => isLoading = true);
     await controller.loadTronconsFromFirestore();
     final result = controller.getMultiAxeTrajet(widget.depart, widget.arrivee);
-    setState(() {
-      trajet = result;
-      isLoading = false;
-    });
+    if (result != null) {
+      final metrics = await controller.getDistanceAndDuration(result);
+      setState(() {
+        trajet = result;
+        distance = metrics['distance']!;
+        duration = metrics['duration']!;
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   List<Widget> _buildTrajetCards(Trajet trajet) {
@@ -78,41 +96,48 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     return widgets;
   }
 
-  Widget _buildCoutSection(Trajet trajet) {
-    final couts = trajet.getTotalCosts();
-    final List<Widget> widgets = [];
+  Widget _buildModeInfo(List<String> modes, int cost, int troncons) {
+    final icon = Icon(Icons.directions, color: Colors.deepPurple);
+    final dureeEstimee = troncons * 3;
 
-    if (couts["taxi"] != null && couts["taxi"]! > 0) {
-      widgets.add(Column(
-        children: [
-          Icon(Icons.local_taxi, color: Colors.yellow[700]),
-          Text('${couts["taxi"]} GNF'),
-        ],
-      ));
-    }
-
-    if (couts["minibus"] != null && couts["minibus"]! > 0) {
-      widgets.add(Column(
-        children: [
-          Icon(Icons.directions_bus, color: Colors.blue),
-          Text('${couts["minibus"]} GNF'),
-        ],
-      ));
-    }
-
-    if (couts["tricycle"] != null && couts["tricycle"]! > 0) {
-      widgets.add(Column(
-        children: [
-          Icon(Icons.electric_rickshaw, color: Colors.green),
-          Text('${couts["tricycle"]} GNF'),
-        ],
-      ));
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: widgets,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            icon,
+            Text('${modes.map((m) => m.toUpperCase()).join(" + ")} - $cost GNF'),
+            Text('~${dureeEstimee} min'),
+          ],
+        ),
+        SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('📍 ${distance.toStringAsFixed(1)} km   ⏱️ ${duration.toStringAsFixed(0)} min', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ],
     );
+  }
+
+  Map<Troncon, String> _buildTronconModes() {
+    final mapping = <Troncon, String>{};
+    int modeIndex = 0;
+    for (int i = 0; i < trajet!.troncons.length; i++) {
+      final troncon = trajet!.troncons[i];
+      final mode = modeIndex < widget.modes.length ? widget.modes[modeIndex] : widget.modes.last;
+      mapping[troncon] = mode;
+
+      if (i < trajet!.troncons.length - 1) {
+        final next = trajet!.troncons[i + 1];
+        if ((next.prixParType[mode] ?? 0) == 0 && modeIndex + 1 < widget.modes.length) {
+          modeIndex++;
+        }
+      }
+    }
+    return mapping;
   }
 
   @override
@@ -131,6 +156,10 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       );
     }
 
+    final axeCount = trajet!.troncons.map((t) => t.axe).toSet().length;
+    final cost = controller.calculerCoutTrajetParModes(trajet!, widget.modes);
+    final tronconCount = trajet!.troncons.length;
+
     return Scaffold(
       appBar: AppBar(title: Text('Itinéraire')),
       body: Padding(
@@ -139,35 +168,30 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('De ${widget.depart.name} à ${widget.arrivee.name}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Text(axeCount > 1 ? '🔁 Ce trajet change d\'axe' : '✔️ Trajet sur un seul axe'),
+            SizedBox(height: 20),
+            _buildModeInfo(widget.modes, cost, tronconCount),
             SizedBox(height: 20),
             Expanded(child: ListView(children: _buildTrajetCards(trajet!))),
-            SizedBox(height: 20),
-            Text('Coûts estimés :', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            SizedBox(height: 10),
-            _buildCoutSection(trajet!),
-            SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: Icon(Icons.map),
-              label: Text('Voir sur la carte'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                textStyle: TextStyle(fontSize: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TrajetMapPage(
-                      arrets: trajet!.troncons.map((t) => t.depart).followedBy([trajet!.troncons.last.arrivee]).toList(),
-                      title: '${widget.depart.name} → ${widget.arrivee.name}',
-                    ),
-                  ),
-                );
-              },
-            ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: Icon(Icons.map),
+        label: Text('Carte'),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TrajetMapPage(
+                arrets: trajet!.troncons.map((t) => t.depart).followedBy([trajet!.troncons.last.arrivee]).toList(),
+                title: '${widget.depart.name} → ${widget.arrivee.name}',
+                tronconModes: _buildTronconModes(),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
