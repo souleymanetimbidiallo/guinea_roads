@@ -1,0 +1,434 @@
+[
+  {
+    "depart": {
+      "id": "1",
+      "name": "Hamdallaye",
+      "latitude": 9.572402,
+      "longitude": -13.656524,
+      "order": 0,
+      "axe": "Corniche Nord"
+    },
+    "arrivee": {
+      "id": "2",
+      "name": "Kipé",
+      "latitude": 9.611226,
+      "longitude": -13.645598,
+      "order": 1,
+      "axe": "Corniche Nord"
+    },
+    "axe": "Corniche Nord",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 0,
+      "tricycle": 2500
+    }
+  },
+  {
+    "depart": {
+      "id": "2",
+      "name": "Kipé",
+      "latitude": 9.611226,
+      "longitude": -13.645598,
+      "order": 1,
+      "axe": "Corniche Nord"
+    },
+    "arrivee": {
+      "id": "3",
+      "name": "Lambangni",
+      "latitude": 9.643639993624275,
+      "longitude": -13.61082069572138,
+      "order": 2,
+      "axe": "Corniche Nord"
+    },
+    "axe": "Corniche Nord",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 0,
+      "tricycle": 2500
+    }
+  },
+  {
+    "depart": {
+      "id": "3",
+      "name": "Lambangni",
+      "latitude": 9.643639993624275,
+      "longitude": -13.61082069572138,
+      "order": 2,
+      "axe": "Corniche Nord"
+    },
+    "arrivee": {
+      "id": "4",
+      "name": "Université Lansana Conté",
+      "latitude": 9.6805,
+      "longitude": -13.579675,
+      "order": 3,
+      "axe": "Corniche Nord"
+    },
+    "axe": "Corniche Nord",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 0,
+      "tricycle": 2500
+    }
+  },
+  {
+    "depart": {
+      "id": "4",
+      "name": "Université Lansana Conté",
+      "latitude": 9.6805,
+      "longitude": -13.579675,
+      "order": 3,
+      "axe": "Corniche Nord"
+    },
+    "arrivee": {
+      "id": "5",
+      "name": "Sonfonia T7",
+      "latitude": 9.669334,
+      "longitude": -13.558108,
+      "order": 4,
+      "axe": "Corniche Nord"
+    },
+    "axe": "Corniche Nord",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 0,
+      "tricycle": 2500
+    }
+  },
+  {
+    "depart": {
+      "id": "port",
+      "name": "Port",
+      "latitude": 9.515225826176167,
+      "longitude": -13.713946254340712,
+      "order": 0,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "dixinn",
+      "name": "Dixinn",
+      "latitude": 9.548472080917607,
+      "longitude": -13.675155818984774,
+      "order": 1,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "dixinn",
+      "name": "Dixinn",
+      "latitude": 9.548472080917607,
+      "longitude": -13.675155818984774,
+      "order": 1,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "hamdallaye",
+      "name": "Hamdallaye",
+      "latitude": 9.572402,
+      "longitude": -13.656524,
+      "order": 2,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 2500
+    }
+  },
+  {
+    "depart": {
+      "id": "hamdallaye",
+      "name": "Hamdallaye",
+      "latitude": 9.572402,
+      "longitude": -13.656524,
+      "order": 2,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "bambeto",
+      "name": "Bambeto",
+      "latitude": 9.588694347777363,
+      "longitude": -13.631507806940512,
+      "order": 3,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "bambeto",
+      "name": "Bambeto",
+      "latitude": 9.588694347777363,
+      "longitude": -13.631507806940512,
+      "order": 3,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "cosa",
+      "name": "Cosa",
+      "latitude": 9.605957575397632,
+      "longitude": -13.612252853475939,
+      "order": 4,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "cosa",
+      "name": "Cosa",
+      "latitude": 9.605957575397632,
+      "longitude": -13.612252853475939,
+      "order": 4,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "enco5",
+      "name": "Enco 5",
+      "latitude": 9.628541011734084,
+      "longitude": -13.593371057647898,
+      "order": 5,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "enco5",
+      "name": "Enco 5",
+      "latitude": 9.628541011734084,
+      "longitude": -13.593371057647898,
+      "order": 5,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "sonfonia_t7",
+      "name": "Sonfonia T7",
+      "latitude": 9.669334,
+      "longitude": -13.558108,
+      "order": 6,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "sonfonia_t7",
+      "name": "Sonfonia T7",
+      "latitude": 9.669334,
+      "longitude": -13.558108,
+      "order": 6,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "cimenterie",
+      "name": "Cimenterie",
+      "latitude": 9.681745879617573,
+      "longitude": -13.534056279996879,
+      "order": 7,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 2500
+    }
+  },
+  {
+    "depart": {
+      "id": "cimenterie",
+      "name": "Cimenterie",
+      "latitude": 9.681745879617573,
+      "longitude": -13.534056279996879,
+      "order": 7,
+      "axe": "Le Prince"
+    },
+    "arrivee": {
+      "id": "kagbelen",
+      "name": "Kagbelen",
+      "latitude": 9.715613683613729,
+      "longitude": -13.501107187455665,
+      "order": 8,
+      "axe": "Le Prince"
+    },
+    "axe": "Le Prince",
+    "prixParType": {
+      "taxi": 2000,
+      "minibus": 1500,
+      "tricycle": 2500
+    }
+  },
+  {
+    "depart": {
+      "id": "port",
+      "name": "Port",
+      "latitude": 9.515225826176167,
+      "longitude": -13.713946254340712,
+      "order": 0,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "arrivee": {
+      "id": "madina",
+      "name": "Madina",
+      "latitude": 9.54555235586996,
+      "longitude": -13.66968320395556,
+      "order": 1,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "axe": "Autoroute Fidel Castro",
+    "prixParType": {
+      "taxi": 3000,
+      "minibus": 2500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "madina",
+      "name": "Madina",
+      "latitude": 9.54555235586996,
+      "longitude": -13.66968320395556,
+      "order": 1,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "arrivee": {
+      "id": "aeroport",
+      "name": "Aéroport",
+      "latitude": 9.574932070926799,
+      "longitude": -13.622695169731449,
+      "order": 2,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "axe": "Autoroute Fidel Castro",
+    "prixParType": {
+      "taxi": 3000,
+      "minibus": 2500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "aeroport",
+      "name": "Aéroport",
+      "latitude": 9.574932070926799,
+      "longitude": -13.622695169731449,
+      "order": 2,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "arrivee": {
+      "id": "matoto",
+      "name": "Matoto",
+      "latitude": 9.611437360321878,
+      "longitude": -13.594349014965946,
+      "order": 3,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "axe": "Autoroute Fidel Castro",
+    "prixParType": {
+      "taxi": 3000,
+      "minibus": 2500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "matoto",
+      "name": "Matoto",
+      "latitude": 9.611437360321878,
+      "longitude": -13.594349014965946,
+      "order": 3,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "arrivee": {
+      "id": "enta",
+      "name": "Enta",
+      "latitude": 9.64197341489083,
+      "longitude": -13.563614723225973,
+      "order": 4,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "axe": "Autoroute Fidel Castro",
+    "prixParType": {
+      "taxi": 3000,
+      "minibus": 2500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "enta",
+      "name": "Enta",
+      "latitude": 9.64197341489083,
+      "longitude": -13.563614723225973,
+      "order": 4,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "arrivee": {
+      "id": "lansanayah",
+      "name": "Lansanayah",
+      "latitude": 9.668181722981341,
+      "longitude": -13.52468319616884,
+      "order": 5,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "axe": "Autoroute Fidel Castro",
+    "prixParType": {
+      "taxi": 3000,
+      "minibus": 2500,
+      "tricycle": 0
+    }
+  },
+  {
+    "depart": {
+      "id": "lansanayah",
+      "name": "Lansanayah",
+      "latitude": 9.668181722981341,
+      "longitude": -13.52468319616884,
+      "order": 5,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "arrivee": {
+      "id": "km36",
+      "name": "Km 36",
+      "latitude": 9.703635186834912,
+      "longitude": -13.498099105115339,
+      "order": 6,
+      "axe": "Autoroute Fidel Castro"
+    },
+    "axe": "Autoroute Fidel Castro",
+    "prixParType": {
+      "taxi": 3000,
+      "minibus": 2500,
+      "tricycle": 0
+    }
+  }
+]
