@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/stop.dart';
 import '../models/troncon.dart';
+import '../services/google_directions_service.dart';
 
 class TrajetMapPage extends StatefulWidget {
   final List<Stop> arrets;
@@ -27,10 +25,11 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   final Set<Marker> markers = {};
   final Set<Polyline> polylines = {};
 
-  final String googleApiKey = 'AIzaSyAkxWY7GjJGgARoAbD1DZlpFNSaJPsQQrY';
+  final GoogleRoutesService _directionsService = GoogleRoutesService();
   LatLngBounds? trajetBounds;
 
   bool trajetsCharges = false;
+  String? routeWarning;
   double totalDistance = 0;
   double totalDuration = 0;
 
@@ -66,7 +65,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
         trajetsCharges = true;
       });
     } catch (e) {
-      print('🚫 Impossible de charger les trajets, connexion ? $e');
+      debugPrint('Impossible de charger les trajets : $e');
       setState(() {
         trajetsCharges = false;
       });
@@ -76,56 +75,67 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   Future<void> _loadPolylineFromGoogle(List<Stop> stops) async {
     if (stops.length < 2) return;
 
-    PolylinePoints polylinePoints = PolylinePoints();
     double distance = 0;
     double duration = 0;
+    String? warning;
 
     for (int i = 0; i < stops.length - 1; i++) {
       final stop1 = stops[i];
       final stop2 = stops[i + 1];
 
-      final result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey,
-        PointLatLng(stop1.latitude, stop1.longitude),
-        PointLatLng(stop2.latitude, stop2.longitude),
-        travelMode: TravelMode.driving,
-      );
+      try {
+        final result = await _directionsService.getDrivingRoute(stop1, stop2);
 
-      if (result.points.isNotEmpty) {
-        final color = _getColorForTroncon(stop1.name, stop2.name);
+        if (result.points.isNotEmpty) {
+          final color = _getColorForTroncon(stop1.name, stop2.name);
 
-        polylines.add(Polyline(
-          polylineId: PolylineId('$i'),
-          points: result.points.map((p) => LatLng(p.latitude, p.longitude)).toList(),
-          color: color,
-          width: 5,
-        ));
+          polylines.add(Polyline(
+            polylineId: PolylineId('route-$i'),
+            points: result.points
+                .map((p) => LatLng(p.latitude, p.longitude))
+                .toList(),
+            color: color,
+            width: 5,
+          ));
 
-        final segmentData = await _fetchDistanceAndDuration(stop1, stop2);
-        distance += segmentData['distance']!;
-        duration += segmentData['duration']!;
+          distance += result.distanceKm;
+          duration += result.durationMinutes;
+        } else {
+          _addFallbackPolyline(i, stop1, stop2);
+        }
+      } catch (error) {
+        debugPrint('Google Directions indisponible : $error');
+        warning ??= error.toString();
+        _addFallbackPolyline(i, stop1, stop2);
       }
     }
 
+    if (!mounted) return;
     setState(() {
       totalDistance = distance;
       totalDuration = duration;
+      if (warning != null) {
+        routeWarning =
+            'Tracé routier indisponible ($warning). Ligne pointillée approximative.';
+      }
     });
   }
 
-  Future<Map<String, double>> _fetchDistanceAndDuration(Stop from, Stop to) async {
-    final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/directions/json?origin=${from.latitude},${from.longitude}&destination=${to.latitude},${to.longitude}&key=$googleApiKey');
-    final response = await http.get(url);
-    final data = json.decode(response.body);
-
-    if (data['routes'] != null && data['routes'].isNotEmpty) {
-      final leg = data['routes'][0]['legs'][0];
-      final dist = leg['distance']['value'] / 1000.0; // in km
-      final dur = leg['duration']['value'] / 60.0; // in minutes
-      return {'distance': dist, 'duration': dur};
-    }
-    return {'distance': 0, 'duration': 0};
+  void _addFallbackPolyline(int index, Stop from, Stop to) {
+    routeWarning =
+        'Tracé routier indisponible. La ligne pointillée est approximative.';
+    polylines.add(
+      Polyline(
+        polylineId: PolylineId('fallback-$index'),
+        points: [
+          LatLng(from.latitude, from.longitude),
+          LatLng(to.latitude, to.longitude),
+        ],
+        color: _getColorForTroncon(from.name, to.name),
+        width: 4,
+        patterns: [PatternItem.dash(16), PatternItem.gap(10)],
+      ),
+    );
   }
 
   Color _getColorForTroncon(String from, String to) {
@@ -171,7 +181,8 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
 
   void _centrerSurTrajet() {
     if (trajetBounds != null) {
-      mapController.animateCamera(CameraUpdate.newLatLngBounds(trajetBounds!, 50));
+      mapController
+          .animateCamera(CameraUpdate.newLatLngBounds(trajetBounds!, 50));
     }
   }
 
@@ -179,9 +190,10 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   Widget build(BuildContext context) {
     final initialPosition = widget.arrets.isNotEmpty
         ? CameraPosition(
-      target: LatLng(widget.arrets.first.latitude, widget.arrets.first.longitude),
-      zoom: 13,
-    )
+            target: LatLng(
+                widget.arrets.first.latitude, widget.arrets.first.longitude),
+            zoom: 13,
+          )
         : CameraPosition(target: LatLng(9.65, -13.60), zoom: 12);
 
     return Scaffold(
@@ -193,9 +205,28 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
             initialCameraPosition: initialPosition,
             markers: markers,
             polylines: trajetsCharges ? polylines : {},
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
           ),
+          if (routeWarning != null)
+            Positioned(
+              top: 12,
+              left: 16,
+              right: 16,
+              child: Material(
+                color: Colors.orange.shade800,
+                borderRadius: BorderRadius.circular(10),
+                elevation: 3,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    routeWarning!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             bottom: 140,
             left: 16,
@@ -227,7 +258,8 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
                     ],
                   ),
                   SizedBox(height: 2),
-                  Text('📍 ${totalDistance.toStringAsFixed(1)} km   ⏱️ ${totalDuration.toStringAsFixed(0)} min',
+                  Text(
+                      '📍 ${totalDistance.toStringAsFixed(1)} km   ⏱️ ${totalDuration.toStringAsFixed(0)} min',
                       style: TextStyle(color: Colors.white))
                 ],
               ),

@@ -1,14 +1,16 @@
-import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/services.dart' show rootBundle;
 import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../models/trajet.dart';
 import '../services/firestore_service.dart';
+import '../services/google_directions_service.dart';
 
 class TrajetController {
   List<Troncon> allTroncons = [];
   final FirestoreService _firestoreService = FirestoreService();
+  final GoogleRoutesService _directionsService = GoogleRoutesService();
 
   Future<void> loadTronconsFromFirestore() async {
     try {
@@ -20,14 +22,16 @@ class TrajetController {
   }
 
   Future<void> loadTronconsFromLocalJson() async {
-    final String response = await rootBundle.loadString('assets/data/troncons_backup.json');
+    final String response =
+        await rootBundle.loadString('assets/data/troncons_backup.json');
     final data = await json.decode(response) as List;
     allTroncons = data.map((json) => Troncon.fromJson(json)).toList();
   }
 
   Trajet? getMultiAxeTrajet(Stop depart, Stop arrivee) {
     final graph = _buildGraph();
-    final path = _bfsPath(graph, depart.name.toLowerCase().trim(), arrivee.name.toLowerCase().trim());
+    final path = _bfsPath(graph, depart.name.toLowerCase().trim(),
+        arrivee.name.toLowerCase().trim());
 
     if (path.isEmpty) {
       print('❌ Aucun trajet multi-axe trouvé.');
@@ -49,14 +53,13 @@ class TrajetController {
     return total;
   }
 
-
-
   List<Map<String, dynamic>> getSmartMultimodalOptions(Trajet trajet) {
     List<Map<String, dynamic>> options = [];
 
     List<String> allModes = ['taxi', 'minibus', 'tricycle'];
 
-    void backtrack(int index, List<Troncon> current, List<String> currentModes) {
+    void backtrack(
+        int index, List<Troncon> current, List<String> currentModes) {
       if (index >= trajet.troncons.length) {
         options.add({
           "trajet": Trajet(troncons: [...current]),
@@ -96,19 +99,18 @@ class TrajetController {
     final modes = ['taxi', 'minibus', 'tricycle'];
 
     for (final mode in modes) {
-      final isAvailable = trajet.troncons.every((t) => (t.prixParType[mode] ?? 0) > 0);
+      final isAvailable =
+          trajet.troncons.every((t) => (t.prixParType[mode] ?? 0) > 0);
       if (isAvailable) {
-        options.add({
-          "trajet": trajet,
-          "mode": mode
-        });
+        options.add({"trajet": trajet, "mode": mode});
       }
     }
 
     return options;
   }
 
-  List<Map<String, dynamic>> getCombinedTransportOptionsForTrajet(Trajet trajet) {
+  List<Map<String, dynamic>> getCombinedTransportOptionsForTrajet(
+      Trajet trajet) {
     Set<String> allModes = {'taxi', 'minibus', 'tricycle'};
     Set<String> usedModes = {};
 
@@ -123,10 +125,7 @@ class TrajetController {
     List<Map<String, dynamic>> result = [];
 
     if (usedModes.length > 1) {
-      result.add({
-        "trajet": trajet,
-        "modes": usedModes.toList()
-      });
+      result.add({"trajet": trajet, "modes": usedModes.toList()});
     }
 
     return result;
@@ -139,20 +138,22 @@ class TrajetController {
       final to = path[i + 1];
 
       final original = allTroncons.firstWhere(
-            (t) =>
-        (t.depart.name.toLowerCase().trim() == from && t.arrivee.name.toLowerCase().trim() == to) ||
-            (t.depart.name.toLowerCase().trim() == to && t.arrivee.name.toLowerCase().trim() == from),
+        (t) =>
+            (t.depart.name.toLowerCase().trim() == from &&
+                t.arrivee.name.toLowerCase().trim() == to) ||
+            (t.depart.name.toLowerCase().trim() == to &&
+                t.arrivee.name.toLowerCase().trim() == from),
         orElse: () => throw Exception('Tronçon manquant entre $from et $to'),
       );
 
       final troncon = original.depart.name.toLowerCase().trim() == from
           ? original
           : Troncon(
-        depart: original.arrivee,
-        arrivee: original.depart,
-        axe: original.axe,
-        prixParType: original.prixParType,
-      );
+              depart: original.arrivee,
+              arrivee: original.depart,
+              axe: original.axe,
+              prixParType: original.prixParType,
+            );
 
       tronconsPath.add(troncon);
     }
@@ -170,7 +171,8 @@ class TrajetController {
     return graph;
   }
 
-  List<String> _bfsPath(Map<String, List<String>> graph, String start, String goal) {
+  List<String> _bfsPath(
+      Map<String, List<String>> graph, String start, String goal) {
     Set<String> visited = {};
     Map<String, String?> cameFrom = {};
     List<String> queue = [start];
@@ -214,7 +216,8 @@ class TrajetController {
     double totalDuration = 0;
 
     for (final troncon in trajet.troncons) {
-      final d = await _fetchDistanceAndDuration(troncon.depart, troncon.arrivee);
+      final d =
+          await _fetchDistanceAndDuration(troncon.depart, troncon.arrivee);
       totalDistance += d['distance']!;
       totalDuration += d['duration']!;
     }
@@ -225,18 +228,18 @@ class TrajetController {
     };
   }
 
-  Future<Map<String, double>> _fetchDistanceAndDuration(Stop from, Stop to) async {
-    final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/directions/json?origin=${from.latitude},${from.longitude}&destination=${to.latitude},${to.longitude}&key=AIzaSyAkxWY7GjJGgARoAbD1DZlpFNSaJPsQQrY');
-    final response = await http.get(url);
-    final data = json.decode(response.body);
-
-    if (data['routes'] != null && data['routes'].isNotEmpty) {
-      final leg = data['routes'][0]['legs'][0];
-      final dist = leg['distance']['value'] / 1000.0;
-      final dur = leg['duration']['value'] / 60.0;
-      return {'distance': dist, 'duration': dur};
+  Future<Map<String, double>> _fetchDistanceAndDuration(
+      Stop from, Stop to) async {
+    try {
+      final route = await _directionsService.getDrivingRoute(from, to);
+      return {
+        'distance': route.distanceKm,
+        'duration': route.durationMinutes,
+      };
+    } on DirectionsException catch (error) {
+      // Les métriques ne doivent pas empêcher l'affichage du trajet local.
+      debugPrint('Google Directions indisponible : $error');
+      return {'distance': 0, 'duration': 0};
     }
-    return {'distance': 0, 'duration': 0};
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:guinea_roads/views/splash_screen.dart';
 
 class GuineaRoadsApp extends StatelessWidget {
+  const GuineaRoadsApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -19,7 +21,8 @@ class GuineaRoadsApp extends StatelessWidget {
           backgroundColor: Colors.black87,
         ),
       ),
-      themeMode: ThemeMode.system, // 🔥 Bascule automatiquement selon le téléphone
+      themeMode:
+          ThemeMode.system, // 🔥 Bascule automatiquement selon le téléphone
       home: SplashScreen(),
     );
   }

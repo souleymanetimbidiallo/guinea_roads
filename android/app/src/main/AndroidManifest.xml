@@ -5,11 +5,12 @@
     <application
         android:label="guinea_roads"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
 
-        <!-- TODO: Add your Google Maps API key here -->
+        <!-- Injected from the ignored android/local.properties file. -->
         <meta-data android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAkxWY7GjJGgARoAbD1DZlpFNSaJPsQQrY"/>
+            android:value="${MAPS_API_KEY}"/>
 
         <activity
             android:name=".MainActivity"
