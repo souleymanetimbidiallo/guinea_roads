@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/stop.dart';
@@ -21,7 +23,7 @@ class TrajetMapPage extends StatefulWidget {
 }
 
 class _TrajetMapPageState extends State<TrajetMapPage> {
-  late GoogleMapController mapController;
+  GoogleMapController? mapController;
   final Set<Marker> markers = {};
   final Set<Polyline> polylines = {};
 
@@ -33,6 +35,19 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   double totalDistance = 0;
   double totalDuration = 0;
 
+  static const _mapStyle = '''
+[
+  {"featureType":"poi","elementType":"labels","stylers":[{"visibility":"off"}]},
+  {"featureType":"poi.business","stylers":[{"visibility":"off"}]},
+  {"featureType":"transit","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+  {"featureType":"road","elementType":"geometry","stylers":[{"color":"#ffffff"}]},
+  {"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#52615b"}]},
+  {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#dce9e4"}]},
+  {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#f4f7f5"}]},
+  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#b8dce8"}]}
+]
+''';
+
   @override
   void initState() {
     super.initState();
@@ -43,33 +58,109 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
     if (widget.arrets.isEmpty) return;
 
     List<LatLng> latLngs = [];
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
 
-    for (var stop in widget.arrets) {
+    for (var index = 0; index < widget.arrets.length; index++) {
+      final stop = widget.arrets[index];
       final latLng = LatLng(stop.latitude, stop.longitude);
       latLngs.add(latLng);
+      final isDepart = index == 0;
+      final isArrivee = index == widget.arrets.length - 1;
+      final markerColor = isDepart
+          ? const Color(0xFF087F5B)
+          : isArrivee
+              ? const Color(0xFFC63D36)
+              : const Color(0xFF2474C6);
+      final markerLabel = isDepart
+          ? 'D'
+          : isArrivee
+              ? 'A'
+              : '$index';
 
       markers.add(
         Marker(
-          markerId: MarkerId(stop.name),
+          markerId: MarkerId('${stop.id}-$index'),
           position: latLng,
-          infoWindow: InfoWindow(title: stop.name),
+          icon: await _createMarker(markerColor, markerLabel, pixelRatio),
+          infoWindow: InfoWindow(
+            title: stop.name,
+            snippet: isDepart
+                ? 'Départ'
+                : isArrivee
+                    ? 'Arrivée'
+                    : 'Étape $index',
+          ),
+          anchor: const Offset(0.5, 0.5),
+          zIndex: isDepart || isArrivee ? 2 : 1,
         ),
       );
     }
 
     trajetBounds = _calculateBounds(latLngs);
+    if (mounted) setState(() {});
 
     try {
       await _loadPolylineFromGoogle(widget.arrets);
+      if (!mounted) return;
       setState(() {
         trajetsCharges = true;
       });
     } catch (e) {
       debugPrint('Impossible de charger les trajets : $e');
+      if (!mounted) return;
       setState(() {
         trajetsCharges = false;
       });
     }
+  }
+
+  Future<BitmapDescriptor> _createMarker(
+    Color color,
+    String label,
+    double pixelRatio,
+  ) async {
+    const logicalSize = 48.0;
+    final size = (logicalSize * pixelRatio).round();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final center = Offset(size / 2, size / 2);
+    final radius = size * 0.38;
+
+    canvas.drawCircle(
+      center + Offset(0, size * 0.05),
+      radius,
+      Paint()
+        ..color = Colors.black.withOpacity(0.18)
+        ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, size * 0.05),
+    );
+    canvas.drawCircle(center, radius, Paint()..color = color);
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = size * 0.045,
+    );
+
+    final paragraphBuilder = ui.ParagraphBuilder(
+      ui.ParagraphStyle(
+        textAlign: TextAlign.center,
+        fontSize: size * 0.32,
+        fontWeight: FontWeight.w800,
+      ),
+    )..pushStyle(ui.TextStyle(color: Colors.white));
+    paragraphBuilder.addText(label);
+    final paragraph = paragraphBuilder.build()
+      ..layout(ui.ParagraphConstraints(width: size.toDouble()));
+    canvas.drawParagraph(
+      paragraph,
+      Offset(0, (size - paragraph.height) / 2),
+    );
+
+    final image = await recorder.endRecording().toImage(size, size);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
   }
 
   Future<void> _loadPolylineFromGoogle(List<Stop> stops) async {
@@ -115,8 +206,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       totalDistance = distance;
       totalDuration = duration;
       if (warning != null) {
-        routeWarning =
-            'Tracé routier indisponible ($warning). Ligne pointillée approximative.';
+        routeWarning = 'Une partie du tracé est approximative.';
       }
     });
   }
@@ -180,9 +270,10 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   }
 
   void _centrerSurTrajet() {
-    if (trajetBounds != null) {
-      mapController
-          .animateCamera(CameraUpdate.newLatLngBounds(trajetBounds!, 50));
+    if (trajetBounds != null && mapController != null) {
+      mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(trajetBounds!, 70),
+      );
     }
   }
 
@@ -201,81 +292,214 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       body: Stack(
         children: [
           GoogleMap(
-            onMapCreated: (controller) => mapController = controller,
+            onMapCreated: (controller) {
+              mapController = controller;
+              controller.setMapStyle(_mapStyle);
+              if (trajetBounds != null) {
+                Future<void>.delayed(
+                  const Duration(milliseconds: 250),
+                  _centrerSurTrajet,
+                );
+              }
+            },
             initialCameraPosition: initialPosition,
             markers: markers,
             polylines: trajetsCharges ? polylines : {},
             myLocationEnabled: false,
             myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+            compassEnabled: false,
           ),
           if (routeWarning != null)
             Positioned(
               top: 12,
               left: 16,
               right: 16,
-              child: Material(
-                color: Colors.orange.shade800,
-                borderRadius: BorderRadius.circular(10),
-                elevation: 3,
+              child: Card(
+                color: Theme.of(context).colorScheme.tertiaryContainer,
                 child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Text(
-                    routeWarning!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color:
+                            Theme.of(context).colorScheme.onTertiaryContainer,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          routeWarning!,
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onTertiaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (!trajetsCharges)
+            Positioned(
+              top: routeWarning == null ? 16 : 84,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Chargement du tracé…',
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           Positioned(
-            bottom: 140,
+            bottom: 146,
             left: 16,
-            child: FloatingActionButton(
+            child: FloatingActionButton.small(
               onPressed: _centrerSurTrajet,
-              child: Icon(Icons.center_focus_strong),
-              tooltip: "Centrer sur la carte",
-              mini: true,
+              tooltip: 'Centrer sur le trajet',
+              child: const Icon(Icons.center_focus_strong_rounded),
             ),
           ),
           Positioned(
-            bottom: 90,
+            bottom: 24,
             left: 16,
             right: 16,
-            child: Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildLegendItem(Colors.yellow, 'Taxi'),
-                      _buildLegendItem(Colors.blue, 'Minibus'),
-                      _buildLegendItem(Colors.green, 'Tricycle'),
-                    ],
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                      '📍 ${totalDistance.toStringAsFixed(1)} km   ⏱️ ${totalDuration.toStringAsFixed(0)} min',
-                      style: TextStyle(color: Colors.white))
-                ],
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetric(
+                            context,
+                            Icons.route_rounded,
+                            '${totalDistance.toStringAsFixed(1)} km',
+                            'Distance',
+                          ),
+                        ),
+                        Container(
+                          height: 38,
+                          width: 1,
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                        Expanded(
+                          child: _buildMetric(
+                            context,
+                            Icons.schedule_rounded,
+                            '${totalDuration.toStringAsFixed(0)} min',
+                            'Durée',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildLegendItem(
+                          context,
+                          const Color(0xFFD19B00),
+                          'Taxi',
+                        ),
+                        _buildLegendItem(
+                          context,
+                          const Color(0xFF2474C6),
+                          'Minibus',
+                        ),
+                        _buildLegendItem(
+                          context,
+                          const Color(0xFF168A45),
+                          'Tricycle',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLegendItem(Color color, String label) {
+  Widget _buildMetric(
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 9),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(
+    BuildContext context,
+    Color color,
+    String label,
+  ) {
     return Row(
       children: [
-        Container(width: 16, height: 16, color: color),
-        SizedBox(width: 6),
-        Text(label, style: TextStyle(color: Colors.white)),
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }

@@ -7,6 +7,7 @@ void main() {
     await tester.pumpWidget(const GuineaRoadsApp());
 
     expect(find.text('Guinea Roads'), findsOneWidget);
-    expect(find.text('Simplifiez vos trajets en Guinée'), findsOneWidget);
+    expect(find.text('Vos trajets, plus simplement.'), findsOneWidget);
+    expect(find.text('CONAKRY • GUINÉE'), findsOneWidget);
   });
 }

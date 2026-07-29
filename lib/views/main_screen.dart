@@ -6,41 +6,59 @@ import 'favoris_page.dart';
 import 'about_page.dart';
 
 class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
   @override
-  _MainScreenState createState() => _MainScreenState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    HomePage(),
-    RecherchePage(),
-    HistoriquePage(),
-    FavorisPage(),
-    AboutPage(),
+    const HomePage(),
+    const RecherchePage(),
+    const HistoriquePage(),
+    const FavorisPage(),
+    const AboutPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        height: 72,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
         },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Recherche'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Historique'),
-          BottomNavigationBarItem(icon: Icon(Icons.star), label: 'Favoris'),
-          BottomNavigationBarItem(icon: Icon(Icons.info_outline), label: 'À propos'),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Accueil',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.search_rounded),
+            selectedIcon: Icon(Icons.manage_search_rounded),
+            label: 'Recherche',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_rounded),
+            label: 'Historique',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.star_outline_rounded),
+            selectedIcon: Icon(Icons.star_rounded),
+            label: 'Favoris',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.info_outline_rounded),
+            selectedIcon: Icon(Icons.info_rounded),
+            label: 'À propos',
+          ),
         ],
       ),
     );
