@@ -84,29 +84,138 @@ class _HistoriquePageState extends State<HistoriquePage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : trajets.isEmpty
-              ? const Center(
-                  child: Text(
-                    'Aucun trajet récent.',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                )
+              ? _buildEmptyState(context)
               : RefreshIndicator(
                   onRefresh: _chargerHistorique,
-                  child: ListView.separated(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     itemCount: trajets.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final trajet = trajets[index];
-                      return ListTile(
-                        leading: const Icon(Icons.history),
-                        title: Text('${trajet.depart} → ${trajet.arrivee}'),
-                        subtitle: Text(_dateLabel(trajet.enregistreLe)),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _relancer(trajet),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Card(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => _relancer(trajet),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  _routeIcon(context, Icons.history_rounded),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          trajet.depart,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 4,
+                                          ),
+                                          child: Icon(
+                                            Icons.arrow_downward_rounded,
+                                            size: 16,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                        ),
+                                        Text(
+                                          trajet.arrivee,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _dateLabel(trajet.enregistreLe),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right_rounded),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       );
                     },
                   ),
                 ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _routeIcon(context, Icons.history_rounded, size: 64),
+            const SizedBox(height: 20),
+            const Text(
+              'Aucun trajet récent',
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Les itinéraires que vous consultez apparaîtront ici.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RecherchePage()),
+              ),
+              icon: const Icon(Icons.search_rounded),
+              label: const Text('Chercher un trajet'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _routeIcon(
+    BuildContext context,
+    IconData icon, {
+    double size = 46,
+  }) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(size / 3),
+      ),
+      child: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.onPrimaryContainer,
+        size: size * 0.5,
+      ),
     );
   }
 }

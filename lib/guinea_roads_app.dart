@@ -79,7 +79,7 @@ class GuineaRoadsApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
-      home: SplashScreen(),
+      home: const SplashScreen(),
     );
   }
 }
