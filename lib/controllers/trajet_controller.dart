@@ -4,19 +4,34 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../models/trajet.dart';
+import '../models/transport_option.dart';
 import '../services/firestore_service.dart';
 import '../services/google_directions_service.dart';
 
 class TrajetController {
+  TrajetController({
+    Future<List<Troncon>> Function()? firestoreLoader,
+    GoogleRoutesService? directionsService,
+  })  : _firestoreLoader = firestoreLoader,
+        _directionsService = directionsService ?? GoogleRoutesService();
+
   List<Troncon> allTroncons = [];
-  final FirestoreService _firestoreService = FirestoreService();
-  final GoogleRoutesService _directionsService = GoogleRoutesService();
+  bool loadedFromLocalData = false;
+  final Future<List<Troncon>> Function()? _firestoreLoader;
+  final GoogleRoutesService _directionsService;
 
   Future<void> loadTronconsFromFirestore() async {
     try {
-      allTroncons = await _firestoreService.getAllTroncons();
+      final loader =
+          _firestoreLoader ?? () => FirestoreService().getAllTroncons();
+      allTroncons = await loader();
+      if (allTroncons.isEmpty) {
+        await loadTronconsFromLocalJson();
+      } else {
+        loadedFromLocalData = false;
+      }
     } catch (e) {
-      print('🚫 Firestore inaccessible, chargement local JSON.');
+      debugPrint('Firestore inaccessible, chargement local JSON.');
       await loadTronconsFromLocalJson();
     }
   }
@@ -26,6 +41,7 @@ class TrajetController {
         await rootBundle.loadString('assets/data/troncons_backup.json');
     final data = await json.decode(response) as List;
     allTroncons = data.map((json) => Troncon.fromJson(json)).toList();
+    loadedFromLocalData = true;
   }
 
   Trajet? getMultiAxeTrajet(Stop depart, Stop arrivee) {
@@ -34,7 +50,7 @@ class TrajetController {
         arrivee.name.toLowerCase().trim());
 
     if (path.isEmpty) {
-      print('❌ Aucun trajet multi-axe trouvé.');
+      debugPrint('Aucun trajet multi-axe trouvé.');
       return null;
     }
 
@@ -42,93 +58,68 @@ class TrajetController {
     return Trajet(troncons: tronconsPath);
   }
 
-  int calculerCoutTrajetParModes(Trajet trajet, List<String> modes) {
-    int total = 0;
-    int index = 0;
+  List<TransportOption> getTransportOptions(Trajet trajet) {
+    if (trajet.troncons.isEmpty) return [];
+
+    const modesDisponibles = ['taxi', 'minibus', 'tricycle'];
+    var candidats = <_TransportCandidate>[
+      const _TransportCandidate(modes: [], cout: 0),
+    ];
+
     for (final troncon in trajet.troncons) {
-      final mode = index < modes.length ? modes[index] : modes.last;
-      total += troncon.prixParType[mode] ?? 0;
-      index++;
-    }
-    return total;
-  }
+      final prochains = <String, _TransportCandidate>{};
 
-  List<Map<String, dynamic>> getSmartMultimodalOptions(Trajet trajet) {
-    List<Map<String, dynamic>> options = [];
+      for (final candidat in candidats) {
+        for (final mode in modesDisponibles) {
+          final prix = troncon.prixParType[mode] ?? 0;
+          if (prix <= 0) continue;
 
-    List<String> allModes = ['taxi', 'minibus', 'tricycle'];
+          final modes = [...candidat.modes, mode];
+          final changements = _countModeChanges(modes);
+          final cle = '$mode|$changements';
+          final prochain = _TransportCandidate(
+            modes: modes,
+            cout: candidat.cout + prix,
+          );
+          final existant = prochains[cle];
 
-    void backtrack(
-        int index, List<Troncon> current, List<String> currentModes) {
-      if (index >= trajet.troncons.length) {
-        options.add({
-          "trajet": Trajet(troncons: [...current]),
-          "modes": [...currentModes]
-        });
-        return;
-      }
-
-      final troncon = trajet.troncons[index];
-
-      for (var mode in allModes) {
-        if ((troncon.prixParType[mode] ?? 0) > 0) {
-          bool canMerge = currentModes.isNotEmpty && currentModes.last == mode;
-
-          if (canMerge) {
-            current.add(troncon);
-            backtrack(index + 1, current, currentModes);
-            current.removeLast();
-          } else {
-            current.add(troncon);
-            currentModes.add(mode);
-            backtrack(index + 1, current, currentModes);
-            current.removeLast();
-            currentModes.removeLast();
+          if (existant == null || prochain.cout < existant.cout) {
+            prochains[cle] = prochain;
           }
         }
       }
+
+      candidats = prochains.values.toList();
     }
 
-    backtrack(0, [], []);
+    candidats.sort((a, b) {
+      final cout = a.cout.compareTo(b.cout);
+      if (cout != 0) return cout;
+      return _countModeChanges(a.modes).compareTo(_countModeChanges(b.modes));
+    });
 
-    return options;
-  }
-
-  List<Map<String, dynamic>> getTransportOptionsForTrajet(Trajet trajet) {
-    List<Map<String, dynamic>> options = [];
-    final modes = ['taxi', 'minibus', 'tricycle'];
-
-    for (final mode in modes) {
-      final isAvailable =
-          trajet.troncons.every((t) => (t.prixParType[mode] ?? 0) > 0);
-      if (isAvailable) {
-        options.add({"trajet": trajet, "mode": mode});
+    final allOptions = <TransportOption>[];
+    final signatures = <String>{};
+    for (final candidat in candidats) {
+      final option = TransportOption(
+        trajet: trajet,
+        modesParTroncon: candidat.modes,
+      );
+      if (signatures.add(option.signature)) {
+        allOptions.add(option);
       }
     }
 
-    return options;
-  }
-
-  List<Map<String, dynamic>> getCombinedTransportOptionsForTrajet(
-      Trajet trajet) {
-    Set<String> allModes = {'taxi', 'minibus', 'tricycle'};
-    Set<String> usedModes = {};
-
-    for (var troncon in trajet.troncons) {
-      for (var mode in allModes) {
-        if ((troncon.prixParType[mode] ?? 0) > 0) {
-          usedModes.add(mode);
-        }
+    final options =
+        allOptions.where((option) => option.nombreChangements == 0).toList();
+    for (final option in allOptions) {
+      if (options.length >= 6) break;
+      if (!options.any((selected) => selected.signature == option.signature)) {
+        options.add(option);
       }
     }
-
-    List<Map<String, dynamic>> result = [];
-
-    if (usedModes.length > 1) {
-      result.add({"trajet": trajet, "modes": usedModes.toList()});
-    }
-
-    return result;
+    options.sort((a, b) => a.coutTotal.compareTo(b.coutTotal));
+    return options;
   }
 
   List<Troncon> _rebuildTronconsFromPath(List<String> path) {
@@ -242,4 +233,22 @@ class TrajetController {
       return {'distance': 0, 'duration': 0};
     }
   }
+}
+
+int _countModeChanges(List<String> modes) {
+  var changements = 0;
+  for (var index = 1; index < modes.length; index++) {
+    if (modes[index] != modes[index - 1]) changements++;
+  }
+  return changements;
+}
+
+class _TransportCandidate {
+  const _TransportCandidate({
+    required this.modes,
+    required this.cout,
+  });
+
+  final List<String> modes;
+  final int cout;
 }

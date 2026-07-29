@@ -3,6 +3,7 @@ import '../models/stop.dart';
 import '../controllers/trajet_controller.dart';
 import '../models/trajet.dart';
 import '../models/troncon.dart';
+import '../models/transport_option.dart';
 import 'trajet_map_page.dart';
 
 class TrajetResultPage extends StatefulWidget {
@@ -40,6 +41,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     final result = controller.getMultiAxeTrajet(widget.depart, widget.arrivee);
     if (result != null) {
       final metrics = await controller.getDistanceAndDuration(result);
+      if (!mounted) return;
       setState(() {
         trajet = result;
         distance = metrics['distance']!;
@@ -47,6 +49,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         isLoading = false;
       });
     } else {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -62,7 +65,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       if (currentList.isNotEmpty && currentAxe != null) {
         widgets.add(
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             elevation: 5,
             margin: EdgeInsets.symmetric(vertical: 10),
             child: Padding(
@@ -70,7 +74,11 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Axe : $currentAxe', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                  Text('Axe : $currentAxe',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent)),
                   SizedBox(height: 10),
                   ...currentList,
                 ],
@@ -82,7 +90,9 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       currentList = [];
     }
 
-    for (final troncon in trajet.troncons) {
+    for (var index = 0; index < trajet.troncons.length; index++) {
+      final troncon = trajet.troncons[index];
+      final mode = widget.modes[index];
       if (troncon.axe != currentAxe) {
         pushCurrentCard();
         currentAxe = troncon.axe;
@@ -90,6 +100,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       currentList.add(ListTile(
         leading: Icon(Icons.arrow_forward),
         title: Text('${troncon.depart.name} → ${troncon.arrivee.name}'),
+        subtitle: Text('${troncon.prixParType[mode]} GNF'),
+        trailing: Chip(label: Text(mode.toUpperCase())),
       ));
     }
     pushCurrentCard();
@@ -99,6 +111,10 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   Widget _buildModeInfo(List<String> modes, int cost, int troncons) {
     final icon = Icon(Icons.directions, color: Colors.deepPurple);
     final dureeEstimee = troncons * 3;
+    final modesUtilises = <String>[];
+    for (final mode in modes) {
+      if (!modesUtilises.contains(mode)) modesUtilises.add(mode);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,7 +123,10 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             icon,
-            Text('${modes.map((m) => m.toUpperCase()).join(" + ")} - $cost GNF'),
+            Text(
+              '${modesUtilises.map((m) => m.toUpperCase()).join(" + ")}'
+              ' - $cost GNF',
+            ),
             Text('~${dureeEstimee} min'),
           ],
         ),
@@ -115,7 +134,9 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('📍 ${distance.toStringAsFixed(1)} km   ⏱️ ${duration.toStringAsFixed(0)} min', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            Text(
+                '📍 ${distance.toStringAsFixed(1)} km   ⏱️ ${duration.toStringAsFixed(0)} min',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
           ],
         ),
       ],
@@ -124,18 +145,9 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
 
   Map<Troncon, String> _buildTronconModes() {
     final mapping = <Troncon, String>{};
-    int modeIndex = 0;
     for (int i = 0; i < trajet!.troncons.length; i++) {
       final troncon = trajet!.troncons[i];
-      final mode = modeIndex < widget.modes.length ? widget.modes[modeIndex] : widget.modes.last;
-      mapping[troncon] = mode;
-
-      if (i < trajet!.troncons.length - 1) {
-        final next = trajet!.troncons[i + 1];
-        if ((next.prixParType[mode] ?? 0) == 0 && modeIndex + 1 < widget.modes.length) {
-          modeIndex++;
-        }
-      }
+      mapping[troncon] = widget.modes[i];
     }
     return mapping;
   }
@@ -157,7 +169,11 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     }
 
     final axeCount = trajet!.troncons.map((t) => t.axe).toSet().length;
-    final cost = controller.calculerCoutTrajetParModes(trajet!, widget.modes);
+    final option = TransportOption(
+      trajet: trajet!,
+      modesParTroncon: widget.modes,
+    );
+    final cost = option.coutTotal;
     final tronconCount = trajet!.troncons.length;
 
     return Scaffold(
@@ -167,9 +183,12 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('De ${widget.depart.name} à ${widget.arrivee.name}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text('De ${widget.depart.name} à ${widget.arrivee.name}',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
-            Text(axeCount > 1 ? '🔁 Ce trajet change d\'axe' : '✔️ Trajet sur un seul axe'),
+            Text(axeCount > 1
+                ? '🔁 Ce trajet change d\'axe'
+                : '✔️ Trajet sur un seul axe'),
             SizedBox(height: 20),
             _buildModeInfo(widget.modes, cost, tronconCount),
             SizedBox(height: 20),
@@ -185,7 +204,9 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
             context,
             MaterialPageRoute(
               builder: (context) => TrajetMapPage(
-                arrets: trajet!.troncons.map((t) => t.depart).followedBy([trajet!.troncons.last.arrivee]).toList(),
+                arrets: trajet!.troncons
+                    .map((t) => t.depart)
+                    .followedBy([trajet!.troncons.last.arrivee]).toList(),
                 title: '${widget.depart.name} → ${widget.arrivee.name}',
                 tronconModes: _buildTronconModes(),
               ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/stop.dart';
 import '../controllers/trajet_controller.dart';
-import '../models/trajet.dart';
+import '../models/transport_option.dart';
 import 'trajet_result_page.dart';
 
 class RecherchePage extends StatefulWidget {
@@ -12,10 +12,13 @@ class RecherchePage extends StatefulWidget {
 class _RecherchePageState extends State<RecherchePage> {
   final TrajetController controller = TrajetController();
   bool isLoading = true;
+  bool isSearching = false;
+  String? loadError;
+  String? searchMessage;
   List<Stop> allStops = [];
   String? selectedDepartName;
   String? selectedArriveeName;
-  List<Map<String, dynamic>> trajetVariants = [];
+  List<_TrajetVariant> trajetVariants = [];
 
   @override
   void initState() {
@@ -24,23 +27,39 @@ class _RecherchePageState extends State<RecherchePage> {
   }
 
   Future<void> loadData() async {
-    await controller.loadTronconsFromFirestore();
-    setState(() {
-      allStops = controller.extractAllStops();
-      isLoading = false;
-    });
+    try {
+      await controller.loadTronconsFromFirestore();
+      if (!mounted) return;
+      setState(() {
+        allStops = controller.extractAllStops()
+          ..sort((a, b) => a.name.compareTo(b.name));
+        loadError = null;
+        isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        loadError = 'Impossible de charger les arrêts.';
+        isLoading = false;
+      });
+    }
   }
 
   Stop? findStopByName(String name) {
+    final normalizedName = name.toLowerCase().trim();
     try {
-      return allStops.firstWhere((s) => s.name.toLowerCase() == name.toLowerCase());
+      return allStops.firstWhere(
+        (stop) => stop.name.toLowerCase().trim() == normalizedName,
+      );
     } catch (e) {
       return null;
     }
   }
 
-  Widget buildTrajetCard(Trajet trajet, List<String> modes, double distance, double duration) {
-    List<Icon> icons = modes.map((mode) {
+  Widget buildTrajetCard(_TrajetVariant variant) {
+    final option = variant.option;
+    final modes = option.modesUtilises;
+    final icons = modes.map((mode) {
       switch (mode) {
         case 'taxi':
           return Icon(Icons.local_taxi, color: Colors.yellow[700]);
@@ -53,23 +72,35 @@ class _RecherchePageState extends State<RecherchePage> {
       }
     }).toList();
 
-    int totalCost = 0;
-    for (var mode in modes) {
-      totalCost += trajet.getTotalCost(mode);
-    }
-
     return Card(
       child: ListTile(
-        title: Text('${modes.map((m) => m.toUpperCase()).join(" + ")} - ${trajet.troncons.length} tronçons'),
+        title: Text(
+          '${modes.map((m) => m.toUpperCase()).join(" + ")}'
+          ' - ${option.trajet.troncons.length} tronçons',
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [...icons, SizedBox(width: 10), Text('$totalCost GNF')]),
-            SizedBox(height: 5),
-            Text('📍 ${distance.toStringAsFixed(1)} km   ⏱️ ${duration.toStringAsFixed(0)} min'),
+            Row(
+              children: [
+                ...icons,
+                const SizedBox(width: 10),
+                Text('${option.coutTotal} GNF'),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              '📍 ${variant.distance.toStringAsFixed(1)} km'
+              '   ⏱️ ${variant.duration.toStringAsFixed(0)} min',
+            ),
+            if (option.nombreChangements > 0)
+              Text(
+                '${option.nombreChangements} changement'
+                '${option.nombreChangements > 1 ? 's' : ''} de transport',
+              ),
           ],
         ),
-        trailing: Icon(Icons.arrow_forward_ios),
+        trailing: const Icon(Icons.arrow_forward_ios),
         onTap: () {
           final depart = findStopByName(selectedDepartName ?? '');
           final arrivee = findStopByName(selectedArriveeName ?? '');
@@ -80,7 +111,7 @@ class _RecherchePageState extends State<RecherchePage> {
                 builder: (_) => TrajetResultPage(
                   depart: depart,
                   arrivee: arrivee,
-                  modes: modes,
+                  modes: option.modesParTroncon,
                 ),
               ),
             );
@@ -93,37 +124,67 @@ class _RecherchePageState extends State<RecherchePage> {
   Future<void> chercherTrajets() async {
     final depart = findStopByName(selectedDepartName ?? '');
     final arrivee = findStopByName(selectedArriveeName ?? '');
-    if (depart != null && arrivee != null) {
+
+    if (depart == null || arrivee == null) {
+      _showMessage('Sélectionnez deux arrêts proposés dans les listes.');
+      return;
+    }
+    if (depart.id == arrivee.id ||
+        depart.name.toLowerCase().trim() == arrivee.name.toLowerCase().trim()) {
+      _showMessage('Le départ et l’arrivée doivent être différents.');
+      return;
+    }
+
+    setState(() {
+      isSearching = true;
+      searchMessage = null;
+      trajetVariants = [];
+    });
+
+    try {
       final trajet = controller.getMultiAxeTrajet(depart, arrivee);
       if (trajet != null) {
-        final unique = controller.getTransportOptionsForTrajet(trajet);
-        final combines = controller.getCombinedTransportOptionsForTrajet(trajet);
+        final options = controller.getTransportOptions(trajet);
         final metrics = await controller.getDistanceAndDuration(trajet);
 
+        if (!mounted) return;
         setState(() {
-          trajetVariants = [
-            ...unique.map((t) => {
-              "trajet": t["trajet"],
-              "modes": [t["mode"]],
-              "distance": metrics['distance'],
-              "duration": metrics['duration']
-            }),
-            ...combines.map((c) => {
-              "trajet": c["trajet"],
-              "modes": c["modes"],
-              "distance": metrics['distance'],
-              "duration": metrics['duration']
-            })
-          ];
+          trajetVariants = options
+              .map(
+                (option) => _TrajetVariant(
+                  option: option,
+                  distance: metrics['distance'] ?? 0,
+                  duration: metrics['duration'] ?? 0,
+                ),
+              )
+              .toList();
+          if (trajetVariants.isEmpty) {
+            searchMessage =
+                'Aucun moyen de transport disponible sur ce trajet.';
+          }
         });
       } else {
-        setState(() => trajetVariants = []);
+        if (!mounted) return;
+        setState(() {
+          searchMessage = 'Aucun trajet ne relie ces deux arrêts.';
+        });
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner les deux arrêts')),
-      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        searchMessage = 'Une erreur est survenue pendant le calcul du trajet.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => isSearching = false);
+      }
     }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -135,23 +196,64 @@ class _RecherchePageState extends State<RecherchePage> {
       );
     }
 
+    if (loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Rechercher un trajet')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(loadError!),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    isLoading = true;
+                    loadError = null;
+                  });
+                  loadData();
+                },
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text("Rechercher un trajet")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            if (controller.loadedFromLocalData)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Mode hors connexion : données locales utilisées.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
             Autocomplete<String>(
               optionsBuilder: (TextEditingValue value) {
                 return allStops
                     .map((s) => s.name)
-                    .where((name) => name.toLowerCase().contains(value.text.toLowerCase()))
+                    .where((name) =>
+                        name.toLowerCase().contains(value.text.toLowerCase()))
                     .toList();
               },
               onSelected: (value) {
                 setState(() => selectedDepartName = value);
               },
-              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+              fieldViewBuilder:
+                  (context, controller, focusNode, onFieldSubmitted) {
                 controller.text = selectedDepartName ?? '';
                 return TextField(
                   controller: controller,
@@ -181,13 +283,15 @@ class _RecherchePageState extends State<RecherchePage> {
               optionsBuilder: (TextEditingValue value) {
                 return allStops
                     .map((s) => s.name)
-                    .where((name) => name.toLowerCase().contains(value.text.toLowerCase()))
+                    .where((name) =>
+                        name.toLowerCase().contains(value.text.toLowerCase()))
                     .toList();
               },
               onSelected: (value) {
                 setState(() => selectedArriveeName = value);
               },
-              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+              fieldViewBuilder:
+                  (context, controller, focusNode, onFieldSubmitted) {
                 controller.text = selectedArriveeName ?? '';
                 return TextField(
                   controller: controller,
@@ -202,32 +306,51 @@ class _RecherchePageState extends State<RecherchePage> {
             ),
             SizedBox(height: 20),
             ElevatedButton.icon(
-              icon: Icon(Icons.search),
-              label: Text("Rechercher les trajets"),
+              icon: isSearching
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.search),
+              label: Text(
+                isSearching ? 'Calcul en cours…' : 'Rechercher les trajets',
+              ),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 textStyle: TextStyle(fontSize: 18),
               ),
-              onPressed: chercherTrajets,
+              onPressed: isSearching ? null : chercherTrajets,
             ),
             SizedBox(height: 20),
             Expanded(
               child: trajetVariants.isEmpty
-                  ? Text("Aucun trajet trouvé")
+                  ? Center(
+                      child: Text(
+                        searchMessage ??
+                            'Sélectionnez un départ et une arrivée.',
+                        textAlign: TextAlign.center,
+                      ),
+                    )
                   : ListView(
-                children: trajetVariants
-                    .map((item) => buildTrajetCard(
-                  item["trajet"],
-                  List<String>.from(item["modes"]),
-                  item['distance'] ?? 0,
-                  item['duration'] ?? 0,
-                ))
-                    .toList(),
-              ),
+                      children: trajetVariants.map(buildTrajetCard).toList(),
+                    ),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class _TrajetVariant {
+  const _TrajetVariant({
+    required this.option,
+    required this.distance,
+    required this.duration,
+  });
+
+  final TransportOption option;
+  final double distance;
+  final double duration;
 }
