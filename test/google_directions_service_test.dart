@@ -7,6 +7,8 @@ import 'package:http/testing.dart';
 void main() {
   const compiledApiKey = String.fromEnvironment('GOOGLE_ROUTES_API_KEY');
 
+  setUp(GoogleRoutesService.clearCache);
+
   final origin = Stop(
     id: 'origin',
     name: 'Origine',
@@ -103,4 +105,110 @@ void main() {
       ),
     );
   });
+
+  test('réutilise une route en cache entre plusieurs services', () async {
+    var requestCount = 0;
+    final client = MockClient((_) async {
+      requestCount++;
+      return _validResponse();
+    });
+    final firstService = GoogleRoutesService(
+      apiKey: 'test-key',
+      client: client,
+    );
+    final secondService = GoogleRoutesService(
+      apiKey: 'test-key',
+      client: client,
+    );
+
+    await firstService.getDrivingRoute(origin, destination);
+    await secondService.getDrivingRoute(origin, destination);
+
+    expect(requestCount, 1);
+  });
+
+  test('partage une requête identique déjà en cours', () async {
+    var requestCount = 0;
+    final service = GoogleRoutesService(
+      apiKey: 'test-key',
+      client: MockClient((_) async {
+        requestCount++;
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return _validResponse();
+      }),
+    );
+
+    await Future.wait([
+      service.getDrivingRoute(origin, destination),
+      service.getDrivingRoute(origin, destination),
+    ]);
+
+    expect(requestCount, 1);
+  });
+
+  test('ne met pas les erreurs en cache', () async {
+    var requestCount = 0;
+    final service = GoogleRoutesService(
+      apiKey: 'test-key',
+      client: MockClient((_) async {
+        requestCount++;
+        if (requestCount == 1) {
+          return http.Response('{"error":{"message":"temporaire"}}', 503);
+        }
+        return _validResponse();
+      }),
+    );
+
+    await expectLater(
+      service.getDrivingRoute(origin, destination),
+      throwsA(isA<DirectionsException>()),
+    );
+    final route = await service.getDrivingRoute(origin, destination);
+
+    expect(requestCount, 2);
+    expect(route.distanceKm, 1);
+  });
+
+  test('désactive le cache lorsque sa durée est nulle', () async {
+    var requestCount = 0;
+    final service = GoogleRoutesService(
+      apiKey: 'test-key',
+      cacheDuration: Duration.zero,
+      client: MockClient((_) async {
+        requestCount++;
+        return _validResponse();
+      }),
+    );
+
+    await service.getDrivingRoute(origin, destination);
+    await service.getDrivingRoute(origin, destination);
+
+    expect(requestCount, 2);
+  });
+
+  test('rafraîchit une route après expiration du cache', () async {
+    var requestCount = 0;
+    final service = GoogleRoutesService(
+      apiKey: 'test-key',
+      cacheDuration: const Duration(milliseconds: 1),
+      client: MockClient((_) async {
+        requestCount++;
+        return _validResponse();
+      }),
+    );
+
+    await service.getDrivingRoute(origin, destination);
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await service.getDrivingRoute(origin, destination);
+
+    expect(requestCount, 2);
+  });
+}
+
+http.Response _validResponse() {
+  return http.Response(
+    '{"routes":[{"duration":"60s","distanceMeters":1000,'
+    '"polyline":{"encodedPolyline":"??"}}]}',
+    200,
+  );
 }

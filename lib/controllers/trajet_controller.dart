@@ -203,15 +203,19 @@ class TrajetController {
   }
 
   Future<Map<String, double>> getDistanceAndDuration(Trajet trajet) async {
-    double totalDistance = 0;
-    double totalDuration = 0;
-
-    for (final troncon in trajet.troncons) {
-      final d =
-          await _fetchDistanceAndDuration(troncon.depart, troncon.arrivee);
-      totalDistance += d['distance']!;
-      totalDuration += d['duration']!;
-    }
+    final metrics = await Future.wait(
+      trajet.troncons.map(
+        (troncon) => _fetchDistanceAndDuration(troncon.depart, troncon.arrivee),
+      ),
+    );
+    final totalDistance = metrics.fold<double>(
+      0,
+      (total, metric) => total + (metric['distance'] ?? 0),
+    );
+    final totalDuration = metrics.fold<double>(
+      0,
+      (total, metric) => total + (metric['duration'] ?? 0),
+    );
 
     return {
       'distance': totalDistance,
@@ -227,7 +231,7 @@ class TrajetController {
         'distance': route.distanceKm,
         'duration': route.durationMinutes,
       };
-    } on DirectionsException catch (error) {
+    } catch (error) {
       // Les métriques ne doivent pas empêcher l'affichage du trajet local.
       debugPrint('Google Directions indisponible : $error');
       return {'distance': 0, 'duration': 0};

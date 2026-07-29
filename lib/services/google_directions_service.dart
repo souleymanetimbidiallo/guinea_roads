@@ -21,8 +21,12 @@ class GoogleRoutesService {
   GoogleRoutesService({
     http.Client? client,
     String apiKey = _environmentApiKey,
+    Duration cacheDuration = const Duration(minutes: 30),
+    int maxCacheEntries = 100,
   })  : _client = client ?? http.Client(),
-        _apiKey = apiKey;
+        _apiKey = apiKey,
+        _cacheDuration = cacheDuration,
+        _maxCacheEntries = maxCacheEntries;
 
   static const String _environmentApiKey = String.fromEnvironment(
     'GOOGLE_ROUTES_API_KEY',
@@ -30,7 +34,17 @@ class GoogleRoutesService {
 
   final http.Client _client;
   final String _apiKey;
+  final Duration _cacheDuration;
+  final int _maxCacheEntries;
   final PolylinePoints _polylinePoints = PolylinePoints();
+
+  static final Map<String, _CachedRoute> _cache = {};
+  static final Map<String, Future<DirectionsRoute>> _pendingRequests = {};
+
+  static void clearCache() {
+    _cache.clear();
+    _pendingRequests.clear();
+  }
 
   Future<DirectionsRoute> getDrivingRoute(Stop from, Stop to) async {
     if (_apiKey.isEmpty) {
@@ -39,6 +53,36 @@ class GoogleRoutesService {
       );
     }
 
+    final key = _cacheKey(from, to);
+    final now = DateTime.now();
+    _cache.removeWhere((_, entry) => !entry.expiresAt.isAfter(now));
+
+    final cached = _cache[key];
+    if (cached != null) return cached.route;
+
+    final pending = _pendingRequests[key];
+    if (pending != null) return pending;
+
+    final request = _fetchDrivingRoute(from, to);
+    _pendingRequests[key] = request;
+    try {
+      final route = await request;
+      if (_cacheDuration > Duration.zero) {
+        _cache[key] = _CachedRoute(
+          route: route,
+          expiresAt: DateTime.now().add(_cacheDuration),
+        );
+        while (_cache.length > _maxCacheEntries && _cache.isNotEmpty) {
+          _cache.remove(_cache.keys.first);
+        }
+      }
+      return route;
+    } finally {
+      _pendingRequests.remove(key);
+    }
+  }
+
+  Future<DirectionsRoute> _fetchDrivingRoute(Stop from, Stop to) async {
     final uri = Uri.https(
       'routes.googleapis.com',
       '/directions/v2:computeRoutes',
@@ -113,6 +157,12 @@ class GoogleRoutesService {
     );
   }
 
+  String _cacheKey(Stop from, Stop to) {
+    String coordinate(double value) => value.toStringAsFixed(6);
+    return '${coordinate(from.latitude)},${coordinate(from.longitude)}'
+        '>${coordinate(to.latitude)},${coordinate(to.longitude)}';
+  }
+
   String _readGoogleError(http.Response response) {
     try {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -126,6 +176,16 @@ class GoogleRoutesService {
     }
     return 'Google Routes : erreur HTTP ${response.statusCode}';
   }
+}
+
+class _CachedRoute {
+  const _CachedRoute({
+    required this.route,
+    required this.expiresAt,
+  });
+
+  final DirectionsRoute route;
+  final DateTime expiresAt;
 }
 
 class DirectionsException implements Exception {
