@@ -30,6 +30,7 @@ class _RecherchePageState extends State<RecherchePage> {
   String? selectedDepartName;
   String? selectedArriveeName;
   List<_TrajetVariant> trajetVariants = [];
+  _TrajetSort trajetSort = _TrajetSort.recommande;
   bool autoSearchTriggered = false;
 
   @override
@@ -92,6 +93,12 @@ class _RecherchePageState extends State<RecherchePage> {
 
     return Card(
       child: ListTile(
+        leading: identical(_sortedVariants.first, variant)
+            ? const Tooltip(
+                message: 'Option recommandée selon le tri sélectionné',
+                child: Icon(Icons.stars, color: Colors.amber),
+              )
+            : null,
         title: Text(
           '${modes.map((m) => m.toUpperCase()).join(" + ")}'
           ' - ${option.trajet.troncons.length} tronçons',
@@ -110,6 +117,13 @@ class _RecherchePageState extends State<RecherchePage> {
             Text(
               '📍 ${variant.distance.toStringAsFixed(1)} km'
               '   ⏱️ ${variant.duration.toStringAsFixed(0)} min',
+            ),
+            Text(
+              variant.etapesIntermediaires.isEmpty
+                  ? 'Trajet direct'
+                  : 'Via ${variant.etapesIntermediaires.join(' • ')}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             if (option.nombreChangements > 0)
               Text(
@@ -130,6 +144,7 @@ class _RecherchePageState extends State<RecherchePage> {
                   depart: depart,
                   arrivee: arrivee,
                   modes: option.modesParTroncon,
+                  selectedTrajet: option.trajet,
                 ),
               ),
             );
@@ -160,22 +175,24 @@ class _RecherchePageState extends State<RecherchePage> {
     });
 
     try {
-      final trajet = controller.getMultiAxeTrajet(depart, arrivee);
-      if (trajet != null) {
-        final options = controller.getTransportOptions(trajet);
-        final metrics = await controller.getDistanceAndDuration(trajet);
+      final trajets = controller.getAlternativeTrajets(depart, arrivee);
+      if (trajets.isNotEmpty) {
+        final metrics = await Future.wait(
+          trajets.map(controller.getDistanceAndDuration),
+        );
 
         if (!mounted) return;
         setState(() {
-          trajetVariants = options
-              .map(
-                (option) => _TrajetVariant(
-                  option: option,
-                  distance: metrics['distance'] ?? 0,
-                  duration: metrics['duration'] ?? 0,
-                ),
-              )
-              .toList();
+          trajetVariants = [
+            for (var index = 0; index < trajets.length; index++)
+              ...controller.getTransportOptions(trajets[index]).take(3).map(
+                    (option) => _TrajetVariant(
+                      option: option,
+                      distance: metrics[index]['distance'] ?? 0,
+                      duration: metrics[index]['duration'] ?? 0,
+                    ),
+                  ),
+          ];
           if (trajetVariants.isEmpty) {
             searchMessage =
                 'Aucun moyen de transport disponible sur ce trajet.';
@@ -203,6 +220,59 @@ class _RecherchePageState extends State<RecherchePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  List<_TrajetVariant> get _sortedVariants {
+    final variants = [...trajetVariants];
+    variants.sort((a, b) {
+      switch (trajetSort) {
+        case _TrajetSort.moinsCher:
+          return _compareValues(
+            a.option.coutTotal,
+            b.option.coutTotal,
+            a.duration,
+            b.duration,
+          );
+        case _TrajetSort.plusRapide:
+          return _compareAvailableDurations(a, b);
+        case _TrajetSort.moinsChangements:
+          return _compareValues(
+            a.option.nombreChangements,
+            b.option.nombreChangements,
+            a.option.coutTotal,
+            b.option.coutTotal,
+          );
+        case _TrajetSort.recommande:
+          return _compareValues(
+            a.option.nombreChangements,
+            b.option.nombreChangements,
+            a.option.coutTotal,
+            b.option.coutTotal,
+          );
+      }
+    });
+    return variants;
+  }
+
+  int _compareAvailableDurations(_TrajetVariant a, _TrajetVariant b) {
+    if (a.duration <= 0 && b.duration > 0) return 1;
+    if (b.duration <= 0 && a.duration > 0) return -1;
+    return _compareValues(
+      a.duration,
+      b.duration,
+      a.option.coutTotal,
+      b.option.coutTotal,
+    );
+  }
+
+  int _compareValues(
+    num firstA,
+    num firstB,
+    num secondA,
+    num secondB,
+  ) {
+    final first = firstA.compareTo(firstB);
+    return first != 0 ? first : secondA.compareTo(secondB);
   }
 
   @override
@@ -341,6 +411,27 @@ class _RecherchePageState extends State<RecherchePage> {
               onPressed: isSearching ? null : chercherTrajets,
             ),
             SizedBox(height: 20),
+            if (trajetVariants.isNotEmpty)
+              DropdownButtonFormField<_TrajetSort>(
+                value: trajetSort,
+                decoration: const InputDecoration(
+                  labelText: 'Classer les résultats',
+                  prefixIcon: Icon(Icons.sort),
+                  border: OutlineInputBorder(),
+                ),
+                items: _TrajetSort.values
+                    .map(
+                      (sort) => DropdownMenuItem(
+                        value: sort,
+                        child: Text(sort.label),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (sort) {
+                  if (sort != null) setState(() => trajetSort = sort);
+                },
+              ),
+            if (trajetVariants.isNotEmpty) const SizedBox(height: 12),
             Expanded(
               child: trajetVariants.isEmpty
                   ? Center(
@@ -351,7 +442,7 @@ class _RecherchePageState extends State<RecherchePage> {
                       ),
                     )
                   : ListView(
-                      children: trajetVariants.map(buildTrajetCard).toList(),
+                      children: _sortedVariants.map(buildTrajetCard).toList(),
                     ),
             ),
           ],
@@ -371,4 +462,23 @@ class _TrajetVariant {
   final TransportOption option;
   final double distance;
   final double duration;
+
+  List<String> get etapesIntermediaires {
+    final troncons = option.trajet.troncons;
+    if (troncons.length <= 1) return const [];
+    return troncons
+        .take(troncons.length - 1)
+        .map((t) => t.arrivee.name)
+        .toList();
+  }
+}
+
+enum _TrajetSort {
+  recommande('Recommandé'),
+  moinsCher('Moins cher'),
+  plusRapide('Plus rapide'),
+  moinsChangements('Moins de changements');
+
+  const _TrajetSort(this.label);
+  final String label;
 }
