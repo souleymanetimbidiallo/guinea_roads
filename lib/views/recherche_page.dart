@@ -5,8 +5,19 @@ import '../models/transport_option.dart';
 import 'trajet_result_page.dart';
 
 class RecherchePage extends StatefulWidget {
+  const RecherchePage({
+    super.key,
+    this.initialDepartName,
+    this.initialArriveeName,
+    this.autoSearch = false,
+  });
+
+  final String? initialDepartName;
+  final String? initialArriveeName;
+  final bool autoSearch;
+
   @override
-  _RecherchePageState createState() => _RecherchePageState();
+  State<RecherchePage> createState() => _RecherchePageState();
 }
 
 class _RecherchePageState extends State<RecherchePage> {
@@ -19,10 +30,13 @@ class _RecherchePageState extends State<RecherchePage> {
   String? selectedDepartName;
   String? selectedArriveeName;
   List<_TrajetVariant> trajetVariants = [];
+  bool autoSearchTriggered = false;
 
   @override
   void initState() {
     super.initState();
+    selectedDepartName = widget.initialDepartName;
+    selectedArriveeName = widget.initialArriveeName;
     loadData();
   }
 
@@ -36,6 +50,10 @@ class _RecherchePageState extends State<RecherchePage> {
         loadError = null;
         isLoading = false;
       });
+      if (widget.autoSearch && !autoSearchTriggered) {
+        autoSearchTriggered = true;
+        await chercherTrajets();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
