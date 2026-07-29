@@ -4,6 +4,9 @@ import '../controllers/trajet_controller.dart';
 import '../models/trajet.dart';
 import '../models/troncon.dart';
 import '../models/transport_option.dart';
+import '../models/trajet_enregistre.dart';
+import '../services/favoris_service.dart';
+import '../services/historique_service.dart';
 import 'trajet_map_page.dart';
 
 class TrajetResultPage extends StatefulWidget {
@@ -28,6 +31,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   bool isLoading = true;
   double distance = 0;
   double duration = 0;
+  bool isFavorite = false;
+  bool favoriteLoading = false;
 
   @override
   void initState() {
@@ -41,11 +46,23 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     final result = controller.getMultiAxeTrajet(widget.depart, widget.arrivee);
     if (result != null) {
       final metrics = await controller.getDistanceAndDuration(result);
+      var favorite = false;
+      try {
+        final trajetEnregistre = _trajetEnregistre();
+        await HistoriqueService.ajouterTrajet(trajetEnregistre);
+        favorite = await FavorisService.contient(
+          widget.depart.name,
+          widget.arrivee.name,
+        );
+      } catch (error) {
+        debugPrint('Sauvegarde locale indisponible : $error');
+      }
       if (!mounted) return;
       setState(() {
         trajet = result;
         distance = metrics['distance']!;
         duration = metrics['duration']!;
+        isFavorite = favorite;
         isLoading = false;
       });
     } else {
@@ -54,6 +71,46 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         isLoading = false;
       });
     }
+  }
+
+  TrajetEnregistre _trajetEnregistre() {
+    return TrajetEnregistre(
+      depart: widget.depart.name,
+      arrivee: widget.arrivee.name,
+      modes: widget.modes,
+    );
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (favoriteLoading) return;
+    setState(() => favoriteLoading = true);
+    bool favorite;
+    try {
+      favorite = await FavorisService.basculer(_trajetEnregistre());
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => favoriteLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de modifier les favoris.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      isFavorite = favorite;
+      favoriteLoading = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          favorite
+              ? 'Trajet ajouté aux favoris.'
+              : 'Trajet retiré des favoris.',
+        ),
+      ),
+    );
   }
 
   List<Widget> _buildTrajetCards(Trajet trajet) {
@@ -177,7 +234,22 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     final tronconCount = trajet!.troncons.length;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Itinéraire')),
+      appBar: AppBar(
+        title: const Text('Itinéraire'),
+        actions: [
+          IconButton(
+            onPressed: favoriteLoading ? null : _toggleFavorite,
+            tooltip: isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
+            icon: favoriteLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(isFavorite ? Icons.star : Icons.star_border),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

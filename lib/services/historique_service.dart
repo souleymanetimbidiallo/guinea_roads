@@ -1,21 +1,29 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/trajet_enregistre.dart';
 
 class HistoriqueService {
   static const String keyHistorique = "historique_trajets";
+  static const int nombreMaximum = 20;
 
-  static Future<void> ajouterTrajet(String depart, String arrivee) async {
+  static Future<void> ajouterTrajet(TrajetEnregistre trajet) async {
     final prefs = await SharedPreferences.getInstance();
-    final trajets = prefs.getStringList(keyHistorique) ?? [];
-    trajets.insert(0, "$depart → $arrivee");
-    await prefs.setStringList(keyHistorique, trajets.take(10).toList());
-
-    print("📚 Historique sauvegardé : ${prefs.getStringList(keyHistorique)}");
+    final trajets = await lireHistorique();
+    trajets.removeWhere(
+      (element) => element.identifiant == trajet.identifiant,
+    );
+    trajets.insert(0, trajet);
+    await prefs.setStringList(
+      keyHistorique,
+      trajets.take(nombreMaximum).map((item) => item.toStorage()).toList(),
+    );
   }
 
-
-  static Future<List<String>> lireHistorique() async {
+  static Future<List<TrajetEnregistre>> lireHistorique() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList(keyHistorique) ?? [];
+    return (prefs.getStringList(keyHistorique) ?? const [])
+        .map(TrajetEnregistre.fromStorage)
+        .whereType<TrajetEnregistre>()
+        .toList();
   }
 
   static Future<void> viderHistorique() async {
