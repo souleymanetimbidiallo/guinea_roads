@@ -78,78 +78,183 @@ class _RecherchePageState extends State<RecherchePage> {
   Widget buildTrajetCard(_TrajetVariant variant) {
     final option = variant.option;
     final modes = option.modesUtilises;
-    final icons = modes.map((mode) {
-      switch (mode) {
-        case 'taxi':
-          return Icon(Icons.local_taxi, color: Colors.yellow[700]);
-        case 'minibus':
-          return Icon(Icons.directions_bus, color: Colors.blue);
-        case 'tricycle':
-          return Icon(Icons.electric_rickshaw, color: Colors.green);
-        default:
-          return Icon(Icons.directions, color: Colors.grey);
-      }
-    }).toList();
+    final colors = Theme.of(context).colorScheme;
+    final isRecommended = identical(_sortedVariants.first, variant);
 
-    return Card(
-      child: ListTile(
-        leading: identical(_sortedVariants.first, variant)
-            ? const Tooltip(
-                message: 'Option recommandée selon le tri sélectionné',
-                child: Icon(Icons.stars, color: Colors.amber),
-              )
-            : null,
-        title: Text(
-          '${modes.map((m) => m.toUpperCase()).join(" + ")}'
-          ' - ${option.trajet.troncons.length} tronçons',
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            final depart = findStopByName(selectedDepartName ?? '');
+            final arrivee = findStopByName(selectedArriveeName ?? '');
+            if (depart != null && arrivee != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TrajetResultPage(
+                    depart: depart,
+                    arrivee: arrivee,
+                    modes: option.modesParTroncon,
+                    selectedTrajet: option.trajet,
+                  ),
+                ),
+              );
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ...icons,
-                const SizedBox(width: 10),
-                Text('${option.coutTotal} GNF'),
+                Row(
+                  children: [
+                    if (isRecommended)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.primaryContainer,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          trajetSort.label,
+                          style: TextStyle(
+                            color: colors.onPrimaryContainer,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    const Spacer(),
+                    Text(
+                      '${option.coutTotal} GNF',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: modes.map(_buildModeChip).toList(),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _buildMetric(
+                      Icons.route_rounded,
+                      '${variant.distance.toStringAsFixed(1)} km',
+                    ),
+                    const SizedBox(width: 16),
+                    _buildMetric(
+                      Icons.schedule_rounded,
+                      '${variant.duration.toStringAsFixed(0)} min',
+                    ),
+                    const SizedBox(width: 16),
+                    _buildMetric(
+                      Icons.alt_route_rounded,
+                      '${option.trajet.troncons.length} tronçons',
+                    ),
+                  ],
+                ),
+                const Divider(height: 26),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.turn_slight_right_rounded,
+                      size: 20,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        variant.etapesIntermediaires.isEmpty
+                            ? 'Trajet direct'
+                            : 'Via ${variant.etapesIntermediaires.join(' • ')}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: colors.onSurfaceVariant),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
+                if (option.nombreChangements > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${option.nombreChangements} changement'
+                    '${option.nombreChangements > 1 ? 's' : ''} de transport',
+                    style: TextStyle(
+                      color: colors.tertiary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              '📍 ${variant.distance.toStringAsFixed(1)} km'
-              '   ⏱️ ${variant.duration.toStringAsFixed(0)} min',
-            ),
-            Text(
-              variant.etapesIntermediaires.isEmpty
-                  ? 'Trajet direct'
-                  : 'Via ${variant.etapesIntermediaires.join(' • ')}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (option.nombreChangements > 0)
-              Text(
-                '${option.nombreChangements} changement'
-                '${option.nombreChangements > 1 ? 's' : ''} de transport',
-              ),
-          ],
+          ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios),
-        onTap: () {
-          final depart = findStopByName(selectedDepartName ?? '');
-          final arrivee = findStopByName(selectedArriveeName ?? '');
-          if (depart != null && arrivee != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => TrajetResultPage(
-                  depart: depart,
-                  arrivee: arrivee,
-                  modes: option.modesParTroncon,
-                  selectedTrajet: option.trajet,
-                ),
-              ),
-            );
-          }
-        },
+      ),
+    );
+  }
+
+  Widget _buildModeChip(String mode) {
+    final (icon, color) = switch (mode) {
+      'taxi' => (Icons.local_taxi_rounded, const Color(0xFFD19B00)),
+      'minibus' => (Icons.directions_bus_rounded, const Color(0xFF2474C6)),
+      'tricycle' => (Icons.electric_rickshaw_rounded, const Color(0xFF168A45)),
+      _ => (Icons.directions_rounded, Colors.grey),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 6),
+          Text(
+            mode.toUpperCase(),
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetric(IconData icon, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
@@ -310,23 +415,51 @@ class _RecherchePageState extends State<RecherchePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Rechercher un trajet")),
+      appBar: AppBar(title: const Text('Planifier un trajet')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Où souhaitez-vous aller ?',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Comparez les itinéraires et les moyens de transport.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             if (controller.loadedFromLocalData)
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(8),
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Text(
-                  'Mode hors connexion : données locales utilisées.',
-                  textAlign: TextAlign.center,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.cloud_off_rounded,
+                      color: Theme.of(context).colorScheme.onTertiaryContainer,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Mode hors connexion : données locales utilisées.',
+                      ),
+                    ),
+                  ],
                 ),
               ),
             Autocomplete<String>(
@@ -354,9 +487,9 @@ class _RecherchePageState extends State<RecherchePage> {
                 );
               },
             ),
-            SizedBox(height: 10),
-            IconButton(
-              icon: Icon(Icons.swap_vert, size: 28),
+            const SizedBox(height: 8),
+            IconButton.filledTonal(
+              icon: const Icon(Icons.swap_vert_rounded),
               tooltip: 'Inverser les arrêts',
               onPressed: () {
                 setState(() {
@@ -366,7 +499,7 @@ class _RecherchePageState extends State<RecherchePage> {
                 });
               },
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 8),
             Autocomplete<String>(
               optionsBuilder: (TextEditingValue value) {
                 return allStops
@@ -392,44 +525,60 @@ class _RecherchePageState extends State<RecherchePage> {
                 );
               },
             ),
-            SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: isSearching
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.search),
-              label: Text(
-                isSearching ? 'Calcul en cours…' : 'Rechercher les trajets',
-              ),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                textStyle: TextStyle(fontSize: 18),
-              ),
-              onPressed: isSearching ? null : chercherTrajets,
-            ),
-            SizedBox(height: 20),
-            if (trajetVariants.isNotEmpty)
-              DropdownButtonFormField<_TrajetSort>(
-                value: trajetSort,
-                decoration: const InputDecoration(
-                  labelText: 'Classer les résultats',
-                  prefixIcon: Icon(Icons.sort),
-                  border: OutlineInputBorder(),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: isSearching
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search),
+                label: Text(
+                  isSearching ? 'Calcul en cours…' : 'Rechercher les trajets',
                 ),
-                items: _TrajetSort.values
-                    .map(
-                      (sort) => DropdownMenuItem(
-                        value: sort,
-                        child: Text(sort.label),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                onPressed: isSearching ? null : chercherTrajets,
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (trajetVariants.isNotEmpty)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${trajetVariants.length} options trouvées',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
                       ),
-                    )
-                    .toList(),
-                onChanged: (sort) {
-                  if (sort != null) setState(() => trajetSort = sort);
-                },
+                    ),
+                  ),
+                  DropdownButton<_TrajetSort>(
+                    value: trajetSort,
+                    underline: const SizedBox.shrink(),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                    items: _TrajetSort.values
+                        .map(
+                          (sort) => DropdownMenuItem(
+                            value: sort,
+                            child: Text(sort.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (sort) {
+                      if (sort != null) setState(() => trajetSort = sort);
+                    },
+                  ),
+                ],
               ),
             if (trajetVariants.isNotEmpty) const SizedBox(height: 12),
             Expanded(
