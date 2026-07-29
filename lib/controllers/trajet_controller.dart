@@ -45,17 +45,42 @@ class TrajetController {
   }
 
   Trajet? getMultiAxeTrajet(Stop depart, Stop arrivee) {
-    final graph = _buildGraph();
-    final path = _bfsPath(graph, depart.name.toLowerCase().trim(),
-        arrivee.name.toLowerCase().trim());
+    final trajets = getAlternativeTrajets(depart, arrivee, maxTrajets: 1);
+    return trajets.isEmpty ? null : trajets.first;
+  }
 
-    if (path.isEmpty) {
-      debugPrint('Aucun trajet multi-axe trouvé.');
-      return null;
+  List<Trajet> getAlternativeTrajets(
+    Stop depart,
+    Stop arrivee, {
+    int maxTrajets = 3,
+    int maxDetourTroncons = 3,
+  }) {
+    if (maxTrajets <= 0) return [];
+
+    final graph = _buildGraph();
+    final start = depart.name.toLowerCase().trim();
+    final goal = arrivee.name.toLowerCase().trim();
+    if (start == goal ||
+        !graph.containsKey(start) ||
+        !graph.containsKey(goal)) {
+      return [];
     }
 
-    List<Troncon> tronconsPath = _rebuildTronconsFromPath(path);
-    return Trajet(troncons: tronconsPath);
+    final paths = _findSimplePaths(
+      graph,
+      start,
+      goal,
+      maxPaths: maxTrajets,
+      maxDetourEdges: maxDetourTroncons,
+    );
+    if (paths.isEmpty) {
+      debugPrint('Aucun trajet multi-axe trouvé.');
+      return [];
+    }
+
+    return paths
+        .map((path) => Trajet(troncons: _rebuildTronconsFromPath(path)))
+        .toList();
   }
 
   List<TransportOption> getTransportOptions(Trajet trajet) {
@@ -191,6 +216,44 @@ class TrajetController {
       path.insert(0, current);
     }
     return path;
+  }
+
+  List<List<String>> _findSimplePaths(
+    Map<String, List<String>> graph,
+    String start,
+    String goal, {
+    required int maxPaths,
+    required int maxDetourEdges,
+  }) {
+    final shortestPath = _bfsPath(graph, start, goal);
+    if (shortestPath.isEmpty) return [];
+
+    final maxEdges = shortestPath.length - 1 + maxDetourEdges;
+    final queue = <List<String>>[
+      [start],
+    ];
+    final results = <List<String>>[];
+
+    while (queue.isNotEmpty && results.length < maxPaths) {
+      final path = queue.removeAt(0);
+      final current = path.last;
+      final edgeCount = path.length - 1;
+
+      if (current == goal) {
+        results.add(path);
+        continue;
+      }
+      if (edgeCount >= maxEdges) continue;
+
+      final neighbors = [...graph[current] ?? const <String>[]]..sort();
+      for (final next in neighbors) {
+        if (!path.contains(next)) {
+          queue.add([...path, next]);
+        }
+      }
+    }
+
+    return results;
   }
 
   List<Stop> extractAllStops() {

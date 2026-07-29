@@ -13,11 +13,13 @@ class TrajetResultPage extends StatefulWidget {
   final Stop depart;
   final Stop arrivee;
   final List<String> modes;
+  final Trajet? selectedTrajet;
 
   const TrajetResultPage({
     required this.depart,
     required this.arrivee,
     required this.modes,
+    this.selectedTrajet,
     Key? key,
   }) : super(key: key);
 
@@ -43,7 +45,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   Future<void> loadData() async {
     setState(() => isLoading = true);
     await controller.loadTronconsFromFirestore();
-    final result = controller.getMultiAxeTrajet(widget.depart, widget.arrivee);
+    final result = widget.selectedTrajet ??
+        controller.getMultiAxeTrajet(widget.depart, widget.arrivee);
     if (result != null) {
       final metrics = await controller.getDistanceAndDuration(result);
       var favorite = false;
