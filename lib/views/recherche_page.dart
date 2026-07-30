@@ -98,6 +98,7 @@ class _RecherchePageState extends State<RecherchePage> {
                     arrivee: arrivee,
                     modes: option.modesParTroncon,
                     selectedTrajet: option.trajet,
+                    tarifV2: option.tarifV2,
                   ),
                 ),
               );
@@ -143,7 +144,17 @@ class _RecherchePageState extends State<RecherchePage> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: modes.map(_buildModeChip).toList(),
+                  children: [
+                    ...modes.map(_buildModeChip),
+                    if (option.tarifV2 != null)
+                      Chip(
+                        avatar: const Icon(Icons.toll_rounded, size: 16),
+                        label: Text(
+                          '${option.tarifV2!.nombreTranches} tranche'
+                          '${option.tarifV2!.nombreTranches > 1 ? 's' : ''}',
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 Row(

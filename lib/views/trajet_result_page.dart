@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/stop.dart';
+import '../models/tarification.dart';
 import '../controllers/trajet_controller.dart';
 import '../models/trajet.dart';
 import '../models/troncon.dart';
@@ -14,12 +15,14 @@ class TrajetResultPage extends StatefulWidget {
   final Stop arrivee;
   final List<String> modes;
   final Trajet? selectedTrajet;
+  final TarifTrajet? tarifV2;
 
   const TrajetResultPage({
     required this.depart,
     required this.arrivee,
     required this.modes,
     this.selectedTrajet,
+    this.tarifV2,
     Key? key,
   }) : super(key: key);
 
@@ -349,6 +352,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     final option = TransportOption(
       trajet: trajet!,
       modesParTroncon: widget.modes,
+      tarifV2: widget.tarifV2,
     );
     final cost = option.coutTotal;
 
@@ -407,6 +411,18 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
           ),
           const SizedBox(height: 18),
           _buildModeInfo(widget.modes, cost),
+          if (widget.tarifV2 != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Tarif pilote V2 • ${widget.tarifV2!.nombreTranches} tranche'
+              '${widget.tarifV2!.nombreTranches > 1 ? 's' : ''} facturée'
+              '${widget.tarifV2!.nombreTranches > 1 ? 's' : ''}',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.tertiary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 26),
           const Text(
             'Étapes du trajet',

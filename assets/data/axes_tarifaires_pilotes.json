@@ -1,0 +1,66 @@
+[
+  {
+    "id": "sonfonia-t7-lambanyi-ciment",
+    "nom": "Sonfonia T7 – Lambanyi Ciment",
+    "sourceTarifs": "Tarifs V1 existants à confirmer sur le terrain",
+    "tarifsValidesTerrain": false,
+    "limites": [
+      {
+        "id": "sonfonia-t7",
+        "nom": "Sonfonia T7",
+        "latitude": 9.669334,
+        "longitude": -13.558108,
+        "position": 0
+      },
+      {
+        "id": "uglc",
+        "nom": "Université Général Lansana Conté",
+        "latitude": 9.6805,
+        "longitude": -13.579675,
+        "position": 1,
+        "aliases": ["Université Lansana Conté", "UGLC"]
+      },
+      {
+        "id": "lambanyi-ciment",
+        "nom": "Lambanyi (Ciment-Guinée)",
+        "latitude": 9.64364,
+        "longitude": -13.610821,
+        "position": 2,
+        "aliases": ["Lambangni", "Lambanyi Ciment", "Lambanyi Ciment-Guinée"]
+      }
+    ],
+    "reperes": [
+      {
+        "id": "kobayah-pharmacie-dara",
+        "nom": "Kobayah Pharmacie Dara",
+        "latitude": 9.657,
+        "longitude": -13.596,
+        "position": 1.5
+      }
+    ],
+    "tranches": [
+      {
+        "id": "sonfonia-t7-uglc",
+        "nom": "Sonfonia T7 – UGLC",
+        "positionDebut": 0,
+        "positionFin": 1,
+        "tarifsParTransport": {
+          "taxi": 2000,
+          "minibus": 0,
+          "tricycle": 2500
+        }
+      },
+      {
+        "id": "uglc-lambanyi-ciment",
+        "nom": "UGLC – Lambanyi (Ciment-Guinée)",
+        "positionDebut": 1,
+        "positionFin": 2,
+        "tarifsParTransport": {
+          "taxi": 2000,
+          "minibus": 0,
+          "tricycle": 2500
+        }
+      }
+    ]
+  }
+]
