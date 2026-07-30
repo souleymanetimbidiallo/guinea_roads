@@ -21,7 +21,7 @@ class Troncon {
     return Troncon(
       depart: Stop(
         id: departData['id'],
-        name: departData['name'],
+        name: Stop.normaliserNomAffiche(departData['name'] as String),
         latitude: departData['latitude'],
         longitude: departData['longitude'],
         order: departData['order'],
@@ -29,7 +29,7 @@ class Troncon {
       ),
       arrivee: Stop(
         id: arriveeData['id'],
-        name: arriveeData['name'],
+        name: Stop.normaliserNomAffiche(arriveeData['name'] as String),
         latitude: arriveeData['latitude'],
         longitude: arriveeData['longitude'],
         order: arriveeData['order'],

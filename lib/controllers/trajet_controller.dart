@@ -5,19 +5,26 @@ import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../models/trajet.dart';
 import '../models/transport_option.dart';
+import '../models/tarification.dart';
+import '../services/calcul_tarifaire_service.dart';
 import '../services/firestore_service.dart';
 import '../services/google_directions_service.dart';
+import '../services/tarification_data_service.dart';
 
 class TrajetController {
   TrajetController({
     Future<List<Troncon>> Function()? firestoreLoader,
+    Future<List<AxeTarifaire>> Function()? tarificationLoader,
     GoogleRoutesService? directionsService,
   })  : _firestoreLoader = firestoreLoader,
+        _tarificationLoader = tarificationLoader,
         _directionsService = directionsService ?? GoogleRoutesService();
 
   List<Troncon> allTroncons = [];
+  List<AxeTarifaire> axesTarifaires = [];
   bool loadedFromLocalData = false;
   final Future<List<Troncon>> Function()? _firestoreLoader;
+  final Future<List<AxeTarifaire>> Function()? _tarificationLoader;
   final GoogleRoutesService _directionsService;
 
   Future<void> loadTronconsFromFirestore() async {
@@ -33,6 +40,18 @@ class TrajetController {
     } catch (e) {
       debugPrint('Firestore inaccessible, chargement local JSON.');
       await loadTronconsFromLocalJson();
+    }
+    await _loadTarificationPilote();
+  }
+
+  Future<void> _loadTarificationPilote() async {
+    try {
+      final loader =
+          _tarificationLoader ?? () => TarificationDataService().chargerAxes();
+      axesTarifaires = await loader();
+    } catch (error) {
+      axesTarifaires = [];
+      debugPrint('Tarification V2 indisponible, maintien des tarifs V1.');
     }
   }
 
@@ -126,9 +145,11 @@ class TrajetController {
     final allOptions = <TransportOption>[];
     final signatures = <String>{};
     for (final candidat in candidats) {
+      final tarifV2 = _calculerTarifV2(trajet, candidat.modes);
       final option = TransportOption(
         trajet: trajet,
         modesParTroncon: candidat.modes,
+        tarifV2: tarifV2,
       );
       if (signatures.add(option.signature)) {
         allOptions.add(option);
@@ -145,6 +166,33 @@ class TrajetController {
     }
     options.sort((a, b) => a.coutTotal.compareTo(b.coutTotal));
     return options;
+  }
+
+  TarifTrajet? _calculerTarifV2(Trajet trajet, List<String> modes) {
+    final modesUniques = modes.toSet();
+    if (trajet.troncons.isEmpty || modesUniques.length != 1) return null;
+
+    final depart = trajet.troncons.first.depart.name;
+    final arrivee = trajet.troncons.last.arrivee.name;
+    for (final axe in axesTarifaires) {
+      final positionDepart = axe.positionPourNom(depart);
+      final positionArrivee = axe.positionPourNom(arrivee);
+      if (positionDepart == null || positionArrivee == null) continue;
+
+      try {
+        return const CalculTarifaireService().calculer(
+          axe: axe,
+          positionDepart: positionDepart,
+          positionArrivee: positionArrivee,
+          transport: modesUniques.single,
+        );
+      } on TransportIndisponibleException {
+        return null;
+      } on ArgumentError {
+        return null;
+      }
+    }
+    return null;
   }
 
   List<Troncon> _rebuildTronconsFromPath(List<String> path) {

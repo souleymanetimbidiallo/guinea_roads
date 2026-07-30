@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:guinea_roads/controllers/trajet_controller.dart';
 import 'package:guinea_roads/models/stop.dart';
+import 'package:guinea_roads/models/tarification.dart';
 import 'package:guinea_roads/models/troncon.dart';
 
 void main() {
@@ -101,6 +102,108 @@ void main() {
       trajets.every((trajet) => trajet.troncons.length <= 2),
       isTrue,
     );
+  });
+
+  test('applique le tarif V2 aux points connus d’un axe pilote', () {
+    final sonfonia = _stop('Sonfonia T7');
+    final uglc = _stop('Université Lansana Conté');
+    final controller = TrajetController()
+      ..allTroncons = [_troncon(sonfonia, uglc)]
+      ..axesTarifaires = [
+        AxeTarifaire(
+          id: 'axe-pilote',
+          nom: 'Axe pilote',
+          limites: const [
+            LimiteTarifaire(
+              id: 'sonfonia',
+              nom: 'Sonfonia T7',
+              latitude: 0,
+              longitude: 0,
+              position: 0,
+            ),
+            LimiteTarifaire(
+              id: 'uglc',
+              nom: 'UGLC',
+              latitude: 0,
+              longitude: 0,
+              position: 1,
+              aliases: ['Université Lansana Conté'],
+            ),
+          ],
+          tranches: [
+            TrancheTarifaire(
+              id: 'sonfonia-uglc',
+              nom: 'Sonfonia – UGLC',
+              positionDebut: 0,
+              positionFin: 1,
+              tarifsParTransport: const {
+                'taxi': 3000,
+                'minibus': 2000,
+                'tricycle': 1000,
+              },
+            ),
+          ],
+        ),
+      ];
+
+    final trajet = controller.getMultiAxeTrajet(sonfonia, uglc)!;
+    final options = controller.getTransportOptions(trajet);
+
+    expect(options, isNotEmpty);
+    expect(options.every((option) => option.tarifV2 != null), isTrue);
+    expect(options.first.coutTotal, 1000);
+    expect(options.first.tarifV2!.nombreTranches, 1);
+  });
+
+  test('conserve le tarif V1 lorsque le trajet est hors axe pilote', () {
+    final a = _stop('A');
+    final b = _stop('B');
+    final controller = TrajetController()..allTroncons = [_troncon(a, b)];
+
+    final trajet = controller.getMultiAxeTrajet(a, b)!;
+    final options = controller.getTransportOptions(trajet);
+
+    expect(options.every((option) => option.tarifV2 == null), isTrue);
+    expect(options.first.coutTotal, 500);
+  });
+
+  test('normalise l’ancien nom Lambangni sans changer ses coordonnées', () {
+    final stop = Stop.fromJson({
+      'id': 'lambangni',
+      'name': 'Lambangni',
+      'latitude': 9.64364,
+      'longitude': -13.610821,
+      'order': 2,
+      'axe': 'Corniche Nord',
+    });
+
+    expect(stop.name, 'Lambanyi (Ciment-Guinée)');
+    expect(stop.latitude, 9.64364);
+    expect(stop.longitude, -13.610821);
+  });
+
+  test('applique deux tranches sur le trajet pilote complet', () async {
+    final controller = TrajetController(
+      firestoreLoader: () async => [],
+    );
+    await controller.loadTronconsFromFirestore();
+    final stops = controller.extractAllStops();
+    final sonfonia = stops.singleWhere((stop) => stop.name == 'Sonfonia T7');
+    final lambanyi = stops.singleWhere(
+      (stop) => stop.name == 'Lambanyi (Ciment-Guinée)',
+    );
+
+    final trajet = controller.getMultiAxeTrajet(sonfonia, lambanyi)!;
+    final options = controller.getTransportOptions(trajet);
+    final taxi = options.singleWhere(
+      (option) =>
+          option.modesUtilises.length == 1 &&
+          option.modesUtilises.single == 'taxi',
+    );
+
+    expect(taxi.tarifV2, isNotNull);
+    expect(taxi.tarifV2!.nombreTranches, 2);
+    expect(taxi.coutTotal, 4000);
   });
 }
 
