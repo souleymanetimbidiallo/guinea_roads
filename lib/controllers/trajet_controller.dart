@@ -13,6 +13,13 @@ import '../services/firestore_service.dart';
 import '../services/google_directions_service.dart';
 import '../services/tarification_data_service.dart';
 
+enum EchecRechercheTrajet {
+  aucun,
+  arretInconnu,
+  aucunChemin,
+  correspondanceNonValidee,
+}
+
 class TrajetController {
   TrajetController({
     Future<List<Troncon>> Function()? firestoreLoader,
@@ -27,6 +34,7 @@ class TrajetController {
   List<Troncon> allTroncons = [];
   List<AxeTarifaire> axesTarifaires = [];
   List<Correspondance> correspondances = [];
+  EchecRechercheTrajet dernierEchec = EchecRechercheTrajet.aucun;
   bool loadedFromLocalData = false;
   final Future<List<Troncon>> Function()? _firestoreLoader;
   final Future<List<AxeTarifaire>> Function()? _tarificationLoader;
@@ -94,6 +102,7 @@ class TrajetController {
     int maxTrajets = 3,
     int maxDetourTroncons = 3,
   }) {
+    dernierEchec = EchecRechercheTrajet.aucun;
     if (maxTrajets <= 0) return [];
 
     final trajetTarifaire = _construireTrajetTarifaire(depart, arrivee);
@@ -105,6 +114,7 @@ class TrajetController {
     if (start == goal ||
         !graph.containsKey(start) ||
         !graph.containsKey(goal)) {
+      dernierEchec = EchecRechercheTrajet.arretInconnu;
       return [];
     }
 
@@ -119,6 +129,7 @@ class TrajetController {
       maxDetourEdges: maxDetourTroncons,
     );
     if (paths.isEmpty) {
+      dernierEchec = EchecRechercheTrajet.aucunChemin;
       debugPrint('Aucun trajet multi-axe trouvé.');
       return [];
     }
@@ -135,6 +146,9 @@ class TrajetController {
         );
         if (trajets.length >= maxTrajets) break;
       }
+    }
+    if (trajets.isEmpty) {
+      dernierEchec = EchecRechercheTrajet.correspondanceNonValidee;
     }
     return trajets;
   }

@@ -439,7 +439,14 @@ class _RecherchePageState extends State<RecherchePage> {
       } else {
         if (!mounted) return;
         setState(() {
-          searchMessage = 'Aucun trajet ne relie ces deux arrêts.';
+          searchMessage = switch (controller.dernierEchec) {
+            EchecRechercheTrajet.correspondanceNonValidee =>
+              'Ce trajet nécessite une correspondance qui n’est pas encore '
+                  'validée sur le terrain. Essaie un autre arrêt proche.',
+            EchecRechercheTrajet.arretInconnu =>
+              'Un des arrêts n’est pas encore relié au réseau disponible.',
+            _ => 'Aucun trajet validé ne relie actuellement ces deux arrêts.',
+          };
         });
       }
     } catch (error) {
@@ -457,6 +464,42 @@ class _RecherchePageState extends State<RecherchePage> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final hasMessage = searchMessage != null;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              hasMessage ? Icons.info_outline_rounded : Icons.route_outlined,
+              size: 42,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              searchMessage ?? 'Sélectionnez un départ et une arrivée.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (hasMessage) ...[
+              const SizedBox(height: 14),
+              TextButton.icon(
+                onPressed: () => setState(() => searchMessage = null),
+                icon: const Icon(Icons.edit_location_alt_outlined),
+                label: const Text('Modifier les arrêts'),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -682,13 +725,7 @@ class _RecherchePageState extends State<RecherchePage> {
             if (trajetVariants.isNotEmpty) const SizedBox(height: 12),
             Expanded(
               child: trajetVariants.isEmpty
-                  ? Center(
-                      child: Text(
-                        searchMessage ??
-                            'Sélectionnez un départ et une arrivée.',
-                        textAlign: TextAlign.center,
-                      ),
-                    )
+                  ? _buildEmptyState()
                   : ListView(
                       children: _sortedVariants.map(buildTrajetCard).toList(),
                     ),
