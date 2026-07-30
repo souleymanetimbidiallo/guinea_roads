@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/stop.dart';
 import '../controllers/trajet_controller.dart';
 import '../models/transport_option.dart';
+import '../services/score_recommandation_service.dart';
 import 'trajet_result_page.dart';
 
 class RecherchePage extends StatefulWidget {
@@ -339,6 +340,17 @@ class _RecherchePageState extends State<RecherchePage> {
                     ),
                   ),
                 ],
+                if (isRecommended && trajetSort == _TrajetSort.recommande) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${variant.raisonRecommandation} • '
+                    'score ${variant.scoreRecommandation.toStringAsFixed(0)}/100',
+                    style: TextStyle(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -431,6 +443,15 @@ class _RecherchePageState extends State<RecherchePage> {
         final metrics = await Future.wait(
           options.map(controller.getDistanceAndDurationForOption),
         );
+        final scores = const ScoreRecommandationService().calculer([
+          for (var index = 0; index < options.length; index++)
+            CandidatRecommandation(
+              cout: options[index].coutTotal,
+              dureeMinutes: metrics[index]['duration'] ?? 0,
+              changements: options[index].nombreChangements +
+                  options[index].trajet.correspondances.length,
+            ),
+        ]);
 
         if (!mounted) return;
         setState(() {
@@ -444,6 +465,8 @@ class _RecherchePageState extends State<RecherchePage> {
                 durationMax: metrics[index]['durationMax'] ?? 0,
                 profilsValidesTerrain:
                     metrics[index]['profilsValidesTerrain'] == 1,
+                scoreRecommandation: scores[index].valeur,
+                raisonRecommandation: scores[index].raison,
               ),
           ];
           if (trajetVariants.isEmpty) {
@@ -539,12 +562,7 @@ class _RecherchePageState extends State<RecherchePage> {
             b.option.coutTotal,
           );
         case _TrajetSort.recommande:
-          return _compareValues(
-            a.option.nombreChangements,
-            b.option.nombreChangements,
-            a.option.coutTotal,
-            b.option.coutTotal,
-          );
+          return b.scoreRecommandation.compareTo(a.scoreRecommandation);
       }
     });
     return variants;
@@ -760,6 +778,8 @@ class _TrajetVariant {
     required this.durationMin,
     required this.durationMax,
     required this.profilsValidesTerrain,
+    required this.scoreRecommandation,
+    required this.raisonRecommandation,
   });
 
   final TransportOption option;
@@ -768,6 +788,8 @@ class _TrajetVariant {
   final double durationMin;
   final double durationMax;
   final bool profilsValidesTerrain;
+  final double scoreRecommandation;
+  final String raisonRecommandation;
 
   String get libelleDuree {
     if ((durationMax - durationMin).abs() < 0.5) {
