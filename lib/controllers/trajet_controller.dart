@@ -7,10 +7,13 @@ import '../models/trajet.dart';
 import '../models/transport_option.dart';
 import '../models/tarification.dart';
 import '../models/correspondance.dart';
+import '../models/profil_transport.dart';
 import '../services/calcul_tarifaire_service.dart';
+import '../services/calcul_duree_transport_service.dart';
 import '../services/correspondance_data_service.dart';
 import '../services/firestore_service.dart';
 import '../services/google_directions_service.dart';
+import '../services/profil_transport_data_service.dart';
 import '../services/tarification_data_service.dart';
 
 enum EchecRechercheTrajet {
@@ -25,20 +28,24 @@ class TrajetController {
     Future<List<Troncon>> Function()? firestoreLoader,
     Future<List<AxeTarifaire>> Function()? tarificationLoader,
     Future<List<Correspondance>> Function()? correspondanceLoader,
+    Future<List<ProfilTransport>> Function()? profilTransportLoader,
     GoogleRoutesService? directionsService,
   })  : _firestoreLoader = firestoreLoader,
         _tarificationLoader = tarificationLoader,
         _correspondanceLoader = correspondanceLoader,
+        _profilTransportLoader = profilTransportLoader,
         _directionsService = directionsService ?? GoogleRoutesService();
 
   List<Troncon> allTroncons = [];
   List<AxeTarifaire> axesTarifaires = [];
   List<Correspondance> correspondances = [];
+  List<ProfilTransport> profilsTransport = [];
   EchecRechercheTrajet dernierEchec = EchecRechercheTrajet.aucun;
   bool loadedFromLocalData = false;
   final Future<List<Troncon>> Function()? _firestoreLoader;
   final Future<List<AxeTarifaire>> Function()? _tarificationLoader;
   final Future<List<Correspondance>> Function()? _correspondanceLoader;
+  final Future<List<ProfilTransport>> Function()? _profilTransportLoader;
   final GoogleRoutesService _directionsService;
 
   Future<void> loadTronconsFromFirestore() async {
@@ -57,6 +64,18 @@ class TrajetController {
     }
     await _loadTarificationPilote();
     await _loadCorrespondances();
+    await _loadProfilsTransport();
+  }
+
+  Future<void> _loadProfilsTransport() async {
+    try {
+      final loader = _profilTransportLoader ??
+          () => ProfilTransportDataService().charger();
+      profilsTransport = await loader();
+    } catch (error) {
+      profilsTransport = [];
+      debugPrint('Profils transport indisponibles : durée routière utilisée.');
+    }
   }
 
   Future<void> _loadCorrespondances() async {
@@ -490,6 +509,56 @@ class TrajetController {
       'duration': (durationMin + durationMax) / 2,
       'durationMin': durationMin,
       'durationMax': durationMax,
+    };
+  }
+
+  Future<Map<String, double>> getDistanceAndDurationForOption(
+    TransportOption option,
+  ) async {
+    final metrics = await Future.wait(
+      option.trajet.troncons.map(
+        (troncon) => _fetchDistanceAndDuration(troncon.depart, troncon.arrivee),
+      ),
+    );
+    var distance = 0.0;
+    var min = 0.0;
+    var max = 0.0;
+    var profilsValides = true;
+    for (var index = 0; index < metrics.length; index++) {
+      final metric = metrics[index];
+      distance += metric['distance'] ?? 0;
+      final base = metric['duration'] ?? 0;
+      final mode = option.modesParTroncon[index];
+      ProfilTransport? profil;
+      for (final item in profilsTransport) {
+        if (item.transport == mode) {
+          profil = item;
+          break;
+        }
+      }
+      if (profil == null || base <= 0) {
+        min += base;
+        max += base;
+        profilsValides = false;
+        continue;
+      }
+      final estimation = const CalculDureeTransportService().calculer(
+        dureeRoutiereMinutes: base,
+        nombreArrets: 1,
+        profil: profil,
+      );
+      min += estimation.minMinutes;
+      max += estimation.maxMinutes;
+      profilsValides &= estimation.profilValideTerrain;
+    }
+    min += option.trajet.dureeCorrespondancesMin;
+    max += option.trajet.dureeCorrespondancesMax;
+    return {
+      'distance': distance,
+      'duration': (min + max) / 2,
+      'durationMin': min,
+      'durationMax': max,
+      'profilsValidesTerrain': profilsValides ? 1 : 0,
     };
   }
 

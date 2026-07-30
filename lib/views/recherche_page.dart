@@ -329,6 +329,16 @@ class _RecherchePageState extends State<RecherchePage> {
                     ),
                   ),
                 ],
+                if (!variant.profilsValidesTerrain) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Durée pilote • coefficients à valider sur le terrain',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -413,23 +423,28 @@ class _RecherchePageState extends State<RecherchePage> {
     try {
       final trajets = controller.getAlternativeTrajets(depart, arrivee);
       if (trajets.isNotEmpty) {
+        final options = trajets
+            .expand(
+              (trajet) => controller.getTransportOptions(trajet).take(3),
+            )
+            .toList(growable: false);
         final metrics = await Future.wait(
-          trajets.map(controller.getDistanceAndDuration),
+          options.map(controller.getDistanceAndDurationForOption),
         );
 
         if (!mounted) return;
         setState(() {
           trajetVariants = [
-            for (var index = 0; index < trajets.length; index++)
-              ...controller.getTransportOptions(trajets[index]).take(3).map(
-                    (option) => _TrajetVariant(
-                      option: option,
-                      distance: metrics[index]['distance'] ?? 0,
-                      duration: metrics[index]['duration'] ?? 0,
-                      durationMin: metrics[index]['durationMin'] ?? 0,
-                      durationMax: metrics[index]['durationMax'] ?? 0,
-                    ),
-                  ),
+            for (var index = 0; index < options.length; index++)
+              _TrajetVariant(
+                option: options[index],
+                distance: metrics[index]['distance'] ?? 0,
+                duration: metrics[index]['duration'] ?? 0,
+                durationMin: metrics[index]['durationMin'] ?? 0,
+                durationMax: metrics[index]['durationMax'] ?? 0,
+                profilsValidesTerrain:
+                    metrics[index]['profilsValidesTerrain'] == 1,
+              ),
           ];
           if (trajetVariants.isEmpty) {
             searchMessage =
@@ -744,6 +759,7 @@ class _TrajetVariant {
     required this.duration,
     required this.durationMin,
     required this.durationMax,
+    required this.profilsValidesTerrain,
   });
 
   final TransportOption option;
@@ -751,9 +767,10 @@ class _TrajetVariant {
   final double duration;
   final double durationMin;
   final double durationMax;
+  final bool profilsValidesTerrain;
 
   String get libelleDuree {
-    if (option.trajet.correspondances.isEmpty) {
+    if ((durationMax - durationMin).abs() < 0.5) {
       return '${duration.toStringAsFixed(0)} min';
     }
     return '${durationMin.toStringAsFixed(0)}–'
