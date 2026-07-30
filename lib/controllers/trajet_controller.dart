@@ -11,6 +11,7 @@ import '../models/profil_transport.dart';
 import '../models/hub_mobilite.dart';
 import '../models/segment_transport.dart';
 import '../models/corridor_axe.dart';
+import '../models/creneau_congestion.dart';
 import '../services/calcul_tarifaire_service.dart';
 import '../services/calcul_duree_transport_service.dart';
 import '../services/correspondance_data_service.dart';
@@ -20,6 +21,8 @@ import '../services/profil_transport_data_service.dart';
 import '../services/hub_data_service.dart';
 import '../services/routage_pondere_service.dart';
 import '../services/corridor_data_service.dart';
+import '../services/congestion_data_service.dart';
+import '../services/congestion_service.dart';
 import '../services/tarification_data_service.dart';
 
 enum EchecRechercheTrajet {
@@ -37,6 +40,8 @@ class TrajetController {
     Future<List<ProfilTransport>> Function()? profilTransportLoader,
     Future<List<HubMobilite>> Function()? hubLoader,
     Future<List<CorridorAxe>> Function()? corridorLoader,
+    Future<List<CreneauCongestion>> Function()? congestionLoader,
+    DateTime Function()? now,
     GoogleRoutesService? directionsService,
   })  : _firestoreLoader = firestoreLoader,
         _tarificationLoader = tarificationLoader,
@@ -44,6 +49,8 @@ class TrajetController {
         _profilTransportLoader = profilTransportLoader,
         _hubLoader = hubLoader,
         _corridorLoader = corridorLoader,
+        _congestionLoader = congestionLoader,
+        _now = now ?? DateTime.now,
         _directionsService = directionsService ?? GoogleRoutesService();
 
   List<Troncon> allTroncons = [];
@@ -52,6 +59,7 @@ class TrajetController {
   List<ProfilTransport> profilsTransport = [];
   List<HubMobilite> hubs = [];
   List<CorridorAxe> corridors = [];
+  List<CreneauCongestion> creneauxCongestion = [];
   List<SegmentTransport> get segmentsTransport =>
       allTroncons.map(SegmentTransport.depuisTroncon).toList(growable: false);
   EchecRechercheTrajet dernierEchec = EchecRechercheTrajet.aucun;
@@ -62,6 +70,8 @@ class TrajetController {
   final Future<List<ProfilTransport>> Function()? _profilTransportLoader;
   final Future<List<HubMobilite>> Function()? _hubLoader;
   final Future<List<CorridorAxe>> Function()? _corridorLoader;
+  final Future<List<CreneauCongestion>> Function()? _congestionLoader;
+  final DateTime Function() _now;
   final GoogleRoutesService _directionsService;
 
   Future<void> loadTronconsFromFirestore() async {
@@ -83,6 +93,18 @@ class TrajetController {
     await _loadProfilsTransport();
     await _loadHubs();
     await _loadCorridors();
+    await _loadCongestion();
+  }
+
+  Future<void> _loadCongestion() async {
+    try {
+      final loader =
+          _congestionLoader ?? () => CongestionDataService().charger();
+      creneauxCongestion = await loader();
+    } catch (error) {
+      creneauxCongestion = [];
+      debugPrint('Congestion indisponible : durée sans majoration utilisée.');
+    }
   }
 
   Future<void> _loadCorridors() async {
@@ -608,6 +630,9 @@ class TrajetController {
     var min = 0.0;
     var max = 0.0;
     var profilsValides = true;
+    var congestionAppliquee = false;
+    var congestionValidee = true;
+    final dateCalcul = _now();
     for (var index = 0; index < metrics.length; index++) {
       final metric = metrics[index];
       distance += metric['distance'] ?? 0;
@@ -626,14 +651,22 @@ class TrajetController {
         profilsValides = false;
         continue;
       }
+      final congestion = const CongestionService().evaluer(
+        date: dateCalcul,
+        axe: option.trajet.troncons[index].axe,
+        creneaux: creneauxCongestion,
+      );
       final estimation = const CalculDureeTransportService().calculer(
         dureeRoutiereMinutes: base,
         nombreArrets: 1,
         profil: profil,
+        congestion: congestion.niveau,
       );
       min += estimation.minMinutes;
       max += estimation.maxMinutes;
       profilsValides &= estimation.profilValideTerrain;
+      congestionAppliquee |= congestion.appliquee;
+      congestionValidee &= congestion.valideeTerrain;
     }
     min += option.trajet.dureeCorrespondancesMin;
     max += option.trajet.dureeCorrespondancesMax;
@@ -643,6 +676,8 @@ class TrajetController {
       'durationMin': min,
       'durationMax': max,
       'profilsValidesTerrain': profilsValides ? 1 : 0,
+      'congestionPiloteAppliquee': congestionAppliquee ? 1 : 0,
+      'congestionValideeTerrain': congestionValidee ? 1 : 0,
     };
   }
 

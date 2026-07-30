@@ -1,0 +1,43 @@
+[
+  {
+    "id": "semaine-matin",
+    "nom": "Pointe du matin",
+    "joursSemaine": [1, 2, 3, 4, 5],
+    "debut": "06:30",
+    "fin": "09:30",
+    "niveau": 0.7,
+    "valideTerrain": false,
+    "source": "Hypothèse pilote à mesurer sur le terrain"
+  },
+  {
+    "id": "semaine-soir",
+    "nom": "Pointe du soir",
+    "joursSemaine": [1, 2, 3, 4, 5],
+    "debut": "16:00",
+    "fin": "20:00",
+    "niveau": 0.85,
+    "valideTerrain": false,
+    "source": "Hypothèse pilote à mesurer sur le terrain"
+  },
+  {
+    "id": "le-prince-soir",
+    "nom": "Pointe du soir sur Le Prince",
+    "joursSemaine": [1, 2, 3, 4, 5],
+    "debut": "16:00",
+    "fin": "20:00",
+    "niveau": 0.95,
+    "axeId": "le-prince",
+    "valideTerrain": false,
+    "source": "Hypothèse pilote à mesurer sur le terrain"
+  },
+  {
+    "id": "samedi-milieu-journee",
+    "nom": "Affluence du samedi",
+    "joursSemaine": [6],
+    "debut": "10:00",
+    "fin": "15:00",
+    "niveau": 0.4,
+    "valideTerrain": false,
+    "source": "Hypothèse pilote à mesurer sur le terrain"
+  }
+]

@@ -340,6 +340,16 @@ class _RecherchePageState extends State<RecherchePage> {
                     ),
                   ),
                 ],
+                if (variant.congestionPiloteAppliquee) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Congestion du créneau actuel • hypothèse pilote',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
                 if (isRecommended && trajetSort == _TrajetSort.recommande) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -465,6 +475,9 @@ class _RecherchePageState extends State<RecherchePage> {
                 durationMax: metrics[index]['durationMax'] ?? 0,
                 profilsValidesTerrain:
                     metrics[index]['profilsValidesTerrain'] == 1,
+                congestionPiloteAppliquee:
+                    metrics[index]['congestionPiloteAppliquee'] == 1 &&
+                        metrics[index]['congestionValideeTerrain'] != 1,
                 scoreRecommandation: scores[index].valeur,
                 raisonRecommandation: scores[index].raison,
               ),
@@ -778,6 +791,7 @@ class _TrajetVariant {
     required this.durationMin,
     required this.durationMax,
     required this.profilsValidesTerrain,
+    required this.congestionPiloteAppliquee,
     required this.scoreRecommandation,
     required this.raisonRecommandation,
   });
@@ -788,6 +802,7 @@ class _TrajetVariant {
   final double durationMin;
   final double durationMax;
   final bool profilsValidesTerrain;
+  final bool congestionPiloteAppliquee;
   final double scoreRecommandation;
   final String raisonRecommandation;
 
