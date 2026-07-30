@@ -36,6 +36,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   bool isLoading = true;
   double distance = 0;
   double duration = 0;
+  double durationMin = 0;
+  double durationMax = 0;
   bool isFavorite = false;
   bool favoriteLoading = false;
 
@@ -68,6 +70,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         trajet = result;
         distance = metrics['distance']!;
         duration = metrics['duration']!;
+        durationMin = metrics['durationMin']!;
+        durationMax = metrics['durationMax']!;
         isFavorite = favorite;
         isLoading = false;
       });
@@ -252,7 +256,10 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                   child: _summaryMetric(
                     Icons.schedule_rounded,
                     'Durée',
-                    '${duration.toStringAsFixed(0)} min',
+                    trajet!.correspondances.isEmpty
+                        ? '${duration.toStringAsFixed(0)} min'
+                        : '${durationMin.toStringAsFixed(0)}–'
+                            '${durationMax.toStringAsFixed(0)} min',
                   ),
                 ),
               ],
@@ -420,6 +427,52 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
               style: TextStyle(
                 color: Theme.of(context).colorScheme.tertiary,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (trajet!.correspondances.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            ...trajet!.correspondances.map(
+              (correspondance) => Card(
+                color: Theme.of(context).colorScheme.tertiaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.directions_walk_rounded,
+                        color:
+                            Theme.of(context).colorScheme.onTertiaryContainer,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Correspondance à ${correspondance.lieu}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${correspondance.libelleType} • '
+                              '${correspondance.dureeMinMinutes}–'
+                              '${correspondance.dureeMaxMinutes} min'
+                              '${correspondance.cout == 0 ? ' • gratuite' : ' • ${correspondance.cout} GNF'}',
+                            ),
+                            if (correspondance.instructions.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(correspondance.instructions),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],

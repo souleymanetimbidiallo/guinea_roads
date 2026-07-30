@@ -1,14 +1,33 @@
+import 'correspondance.dart';
 import 'troncon.dart';
 
 class Trajet {
   final List<Troncon> troncons;
+  final List<Correspondance> correspondances;
 
-  Trajet({required this.troncons});
+  Trajet({
+    required this.troncons,
+    List<Correspondance> correspondances = const [],
+  }) : correspondances = List.unmodifiable(correspondances);
 
   int getTotalCost(String type) {
     return troncons.fold(0, (total, t) => total + (t.prixParType[type] ?? 0));
   }
+
+  int get coutCorrespondances =>
+      correspondances.fold(0, (total, item) => total + item.cout);
+
+  int get dureeCorrespondancesMin => correspondances.fold(
+        0,
+        (total, item) => total + item.dureeMinMinutes,
+      );
+
+  int get dureeCorrespondancesMax => correspondances.fold(
+        0,
+        (total, item) => total + item.dureeMaxMinutes,
+      );
 }
+
 extension TrajetCostExtension on Trajet {
   Map<String, int> getTotalCosts() {
     int taxi = 0;
@@ -48,4 +67,3 @@ extension TrajetCostExtension on Trajet {
     return mapping;
   }
 }
-
