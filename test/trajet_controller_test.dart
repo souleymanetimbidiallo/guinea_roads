@@ -312,6 +312,10 @@ void main() {
     final trajets = controller.getAlternativeTrajets(depart, arrivee);
 
     expect(trajets, isEmpty);
+    expect(
+      controller.dernierEchec,
+      EchecRechercheTrajet.correspondanceNonValidee,
+    );
   });
 
   test('ignore les raccourcis invalides et trouve une alternative validée', () {
@@ -357,6 +361,7 @@ void main() {
     expect(trajets, hasLength(1));
     expect(trajets.single.troncons, hasLength(3));
     expect(trajets.single.correspondances.single.id, 'jonction-a-b');
+    expect(controller.dernierEchec, EchecRechercheTrajet.aucun);
   });
 
   test('additionne plusieurs correspondances dans un même trajet', () {
