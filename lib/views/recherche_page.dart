@@ -75,6 +75,111 @@ class _RecherchePageState extends State<RecherchePage> {
     }
   }
 
+  Set<String> _axesPourStop(Stop stop) {
+    final nom = Stop.normaliserPourRecherche(stop.name);
+    final axes = <String>{};
+    for (final troncon in controller.allTroncons) {
+      if (Stop.normaliserPourRecherche(troncon.depart.name) == nom ||
+          Stop.normaliserPourRecherche(troncon.arrivee.name) == nom) {
+        axes.add(troncon.axe);
+      }
+    }
+    if (axes.isEmpty && stop.axe.trim().isNotEmpty) axes.add(stop.axe);
+    return axes;
+  }
+
+  bool _estCorrespondance(Stop stop) {
+    final nom = Stop.normaliserPourRecherche(stop.name).replaceAll(' ', '-');
+    return controller.correspondances.any(
+      (correspondance) =>
+          correspondance.pointDepartId == nom ||
+          correspondance.pointArriveeId == nom,
+    );
+  }
+
+  Widget _buildStopAutocomplete({
+    required String label,
+    required IconData icon,
+    required String? valeur,
+    required ValueChanged<String> onSelected,
+  }) {
+    return Autocomplete<Stop>(
+      key: ValueKey('$label-$valeur'),
+      displayStringForOption: (stop) => stop.name,
+      optionsBuilder: (value) => allStops
+          .where((stop) => stop.correspondARecherche(value.text))
+          .take(8),
+      onSelected: (stop) => onSelected(stop.name),
+      optionsViewBuilder: (context, select, options) {
+        final suggestions = options.toList(growable: false);
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 6,
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320, maxWidth: 520),
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: suggestions.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final stop = suggestions[index];
+                  final axes = _axesPourStop(stop).join(' ↔ ');
+                  final correspondance = _estCorrespondance(stop);
+                  return ListTile(
+                    leading: Icon(
+                      correspondance
+                          ? Icons.transfer_within_a_station_rounded
+                          : Icons.place_outlined,
+                    ),
+                    title: Text(stop.name),
+                    subtitle: Text(
+                      [
+                        if (axes.isNotEmpty) axes,
+                        if (correspondance) 'Point de correspondance',
+                      ].join(' • '),
+                    ),
+                    onTap: () => select(stop),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+      fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+        if (valeur != null && textController.text.isEmpty) {
+          textController.text = valeur;
+        }
+        return TextField(
+          controller: textController,
+          focusNode: focusNode,
+          onChanged: (_) => onSelected(''),
+          onSubmitted: (_) => onFieldSubmitted(),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: 'Saisissez un quartier ou un repère',
+            prefixIcon: Icon(icon),
+            suffixIcon: textController.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Effacer',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () {
+                      textController.clear();
+                      onSelected('');
+                    },
+                  ),
+            border: const OutlineInputBorder(),
+          ),
+        );
+      },
+    );
+  }
+
   Widget buildTrajetCard(_TrajetVariant variant) {
     final option = variant.option;
     final modes = option.modesUtilises;
@@ -490,29 +595,12 @@ class _RecherchePageState extends State<RecherchePage> {
                   ],
                 ),
               ),
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue value) {
-                return allStops
-                    .map((s) => s.name)
-                    .where((name) =>
-                        name.toLowerCase().contains(value.text.toLowerCase()))
-                    .toList();
-              },
+            _buildStopAutocomplete(
+              label: 'Arrêt de départ',
+              icon: Icons.my_location,
+              valeur: selectedDepartName,
               onSelected: (value) {
-                setState(() => selectedDepartName = value);
-              },
-              fieldViewBuilder:
-                  (context, controller, focusNode, onFieldSubmitted) {
-                controller.text = selectedDepartName ?? '';
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: InputDecoration(
-                    labelText: 'Arrêt de départ',
-                    prefixIcon: Icon(Icons.my_location),
-                    border: OutlineInputBorder(),
-                  ),
-                );
+                selectedDepartName = value.isEmpty ? null : value;
               },
             ),
             const SizedBox(height: 8),
@@ -528,29 +616,12 @@ class _RecherchePageState extends State<RecherchePage> {
               },
             ),
             const SizedBox(height: 8),
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue value) {
-                return allStops
-                    .map((s) => s.name)
-                    .where((name) =>
-                        name.toLowerCase().contains(value.text.toLowerCase()))
-                    .toList();
-              },
+            _buildStopAutocomplete(
+              label: 'Arrêt d’arrivée',
+              icon: Icons.flag,
+              valeur: selectedArriveeName,
               onSelected: (value) {
-                setState(() => selectedArriveeName = value);
-              },
-              fieldViewBuilder:
-                  (context, controller, focusNode, onFieldSubmitted) {
-                controller.text = selectedArriveeName ?? '';
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: InputDecoration(
-                    labelText: 'Arrêt d\'arrivée',
-                    prefixIcon: Icon(Icons.flag),
-                    border: OutlineInputBorder(),
-                  ),
-                );
+                selectedArriveeName = value.isEmpty ? null : value;
               },
             ),
             const SizedBox(height: 16),
