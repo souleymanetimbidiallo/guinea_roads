@@ -79,6 +79,7 @@ flutter:
   assets:
     - assets/data/troncons_backup.json
     - assets/data/axes_tarifaires_pilotes.json
+    - assets/data/correspondances_validees.json
     - assets/images/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

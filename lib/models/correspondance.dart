@@ -26,11 +26,13 @@ class Correspondance {
   final String axeArriveeId;
   final String pointArriveeId;
   final TypeCorrespondance type;
-  final int dureeMinutes;
+  final int dureeMinMinutes;
+  final int dureeMaxMinutes;
   final int cout;
   final bool bidirectionnelle;
   final bool valideeTerrain;
   final String sourceValidation;
+  final String instructions;
 
   const Correspondance({
     required this.id,
@@ -39,12 +41,15 @@ class Correspondance {
     required this.axeArriveeId,
     required this.pointArriveeId,
     required this.type,
-    required this.dureeMinutes,
+    required this.dureeMinMinutes,
+    required this.dureeMaxMinutes,
     required this.cout,
     this.bidirectionnelle = true,
     this.valideeTerrain = false,
     this.sourceValidation = '',
-  })  : assert(dureeMinutes >= 0),
+    this.instructions = '',
+  })  : assert(dureeMinMinutes >= 0),
+        assert(dureeMaxMinutes >= dureeMinMinutes),
         assert(cout >= 0);
 
   factory Correspondance.fromJson(Map<String, dynamic> json) {
@@ -55,11 +60,15 @@ class Correspondance {
       axeArriveeId: json['axeArriveeId'] as String,
       pointArriveeId: json['pointArriveeId'] as String,
       type: TypeCorrespondance.fromJson(json['type'] as String),
-      dureeMinutes: json['dureeMinutes'] as int,
+      dureeMinMinutes:
+          json['dureeMinMinutes'] as int? ?? json['dureeMinutes'] as int,
+      dureeMaxMinutes:
+          json['dureeMaxMinutes'] as int? ?? json['dureeMinutes'] as int,
       cout: json['cout'] as int,
       bidirectionnelle: json['bidirectionnelle'] as bool? ?? true,
       valideeTerrain: json['valideeTerrain'] as bool? ?? false,
       sourceValidation: json['sourceValidation'] as String? ?? '',
+      instructions: json['instructions'] as String? ?? '',
     );
   }
 
