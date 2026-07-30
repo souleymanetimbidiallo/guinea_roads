@@ -17,6 +17,7 @@ import '../services/firestore_service.dart';
 import '../services/google_directions_service.dart';
 import '../services/profil_transport_data_service.dart';
 import '../services/hub_data_service.dart';
+import '../services/routage_pondere_service.dart';
 import '../services/tarification_data_service.dart';
 
 enum EchecRechercheTrajet {
@@ -148,6 +149,7 @@ class TrajetController {
 
     final trajetTarifaire = _construireTrajetTarifaire(depart, arrivee);
     if (trajetTarifaire != null) return [trajetTarifaire];
+    final trajetPondere = _construireTrajetPondere(depart, arrivee);
 
     final graph = _buildGraph();
     final start = depart.name.toLowerCase().trim();
@@ -172,19 +174,23 @@ class TrajetController {
     if (paths.isEmpty) {
       dernierEchec = EchecRechercheTrajet.aucunChemin;
       debugPrint('Aucun trajet multi-axe trouvé.');
-      return [];
+      return trajetPondere == null ? [] : [trajetPondere];
     }
 
-    final trajets = <Trajet>[];
+    final trajets = <Trajet>[
+      if (trajetPondere != null) trajetPondere,
+    ];
     for (final path in paths) {
       final construit = _rebuildTronconsFromPath(path);
       if (construit != null) {
-        trajets.add(
-          Trajet(
-            troncons: construit.troncons,
-            correspondances: construit.correspondances,
-          ),
+        final trajet = Trajet(
+          troncons: construit.troncons,
+          correspondances: construit.correspondances,
         );
+        final signature = _signatureTrajet(trajet);
+        if (!trajets.any((item) => _signatureTrajet(item) == signature)) {
+          trajets.add(trajet);
+        }
         if (trajets.length >= maxTrajets) break;
       }
     }
@@ -193,6 +199,45 @@ class TrajetController {
     }
     return trajets;
   }
+
+  Trajet? _construireTrajetPondere(Stop depart, Stop arrivee) {
+    final segments = segmentsTransport;
+    final resultat = const RoutagePondereService().calculer(
+      segments: segments,
+      correspondances: correspondances,
+      depart: depart.name,
+      arrivee: arrivee.name,
+    );
+    if (resultat == null || resultat.segments.isEmpty) return null;
+    final segmentsParId = {for (final segment in segments) segment.id: segment};
+    final troncons = <Troncon>[];
+    for (final etape in resultat.segments) {
+      final segment = segmentsParId[etape.segmentId];
+      if (segment == null) return null;
+      final original = allTroncons.firstWhere(
+        (troncon) => SegmentTransport.depuisTroncon(troncon).id == segment.id,
+      );
+      troncons.add(
+        etape.inverse
+            ? Troncon(
+                depart: original.arrivee,
+                arrivee: original.depart,
+                axe: original.axe,
+                prixParType: original.prixParType,
+              )
+            : original,
+      );
+    }
+    return Trajet(
+      troncons: troncons,
+      correspondances: resultat.correspondances,
+    );
+  }
+
+  String _signatureTrajet(Trajet trajet) => trajet.troncons
+      .map((troncon) =>
+          '${troncon.axe}:${troncon.depart.name}>${troncon.arrivee.name}')
+      .join('|');
 
   Trajet? _construireTrajetTarifaire(Stop depart, Stop arrivee) {
     for (final axe in axesTarifaires) {
