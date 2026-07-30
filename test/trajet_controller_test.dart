@@ -303,6 +303,96 @@ void main() {
 
     expect(trajets, isEmpty);
   });
+
+  test('ignore les raccourcis invalides et trouve une alternative validée', () {
+    final depart = _stopSurAxe('Départ', 'axe-a');
+    final arrivee = _stopSurAxe('Arrivée', 'axe-b');
+    final jonctionA = _stopSurAxe('Jonction', 'axe-a');
+    final jonctionB = _stopSurAxe('Jonction', 'axe-b');
+    final milieu = _stopSurAxe('Milieu', 'axe-b');
+    final controller = TrajetController()
+      ..allTroncons = [
+        for (final nom in ['Court A', 'Court B', 'Court C']) ...[
+          _tronconSurAxe(
+            depart,
+            _stopSurAxe(nom, 'axe-a'),
+            'Axe A',
+          ),
+          _tronconSurAxe(
+            _stopSurAxe(nom, 'axe-b'),
+            arrivee,
+            'Axe B',
+          ),
+        ],
+        _tronconSurAxe(depart, jonctionA, 'Axe A'),
+        _tronconSurAxe(jonctionB, milieu, 'Axe B'),
+        _tronconSurAxe(milieu, arrivee, 'Axe B'),
+      ]
+      ..correspondances = [
+        _correspondance(
+          id: 'jonction-a-b',
+          axeDepartId: 'axe-a',
+          pointDepartId: 'jonction',
+          axeArriveeId: 'axe-b',
+          pointArriveeId: 'jonction',
+        ),
+      ];
+
+    final trajets = controller.getAlternativeTrajets(
+      depart,
+      arrivee,
+      maxTrajets: 1,
+    );
+
+    expect(trajets, hasLength(1));
+    expect(trajets.single.troncons, hasLength(3));
+    expect(trajets.single.correspondances.single.id, 'jonction-a-b');
+  });
+
+  test('additionne plusieurs correspondances dans un même trajet', () {
+    final depart = _stopSurAxe('Départ', 'axe-a');
+    final jonction1A = _stopSurAxe('Jonction 1', 'axe-a');
+    final jonction1B = _stopSurAxe('Jonction 1', 'axe-b');
+    final jonction2B = _stopSurAxe('Jonction 2', 'axe-b');
+    final jonction2C = _stopSurAxe('Jonction 2', 'axe-c');
+    final arrivee = _stopSurAxe('Arrivée', 'axe-c');
+    final controller = TrajetController()
+      ..allTroncons = [
+        _tronconSurAxe(depart, jonction1A, 'Axe A'),
+        _tronconSurAxe(jonction1B, jonction2B, 'Axe B'),
+        _tronconSurAxe(jonction2C, arrivee, 'Axe C'),
+      ]
+      ..correspondances = [
+        _correspondance(
+          id: 'jonction-1',
+          axeDepartId: 'axe-a',
+          pointDepartId: 'jonction-1',
+          axeArriveeId: 'axe-b',
+          pointArriveeId: 'jonction-1',
+          dureeMin: 2,
+          dureeMax: 4,
+        ),
+        _correspondance(
+          id: 'jonction-2',
+          axeDepartId: 'axe-b',
+          pointDepartId: 'jonction-2',
+          axeArriveeId: 'axe-c',
+          pointArriveeId: 'jonction-2',
+          dureeMin: 3,
+          dureeMax: 6,
+          cout: 500,
+        ),
+      ];
+
+    final trajet = controller.getMultiAxeTrajet(depart, arrivee)!;
+    final option = controller.getTransportOptions(trajet).first;
+
+    expect(trajet.correspondances, hasLength(2));
+    expect(trajet.dureeCorrespondancesMin, 5);
+    expect(trajet.dureeCorrespondancesMax, 10);
+    expect(trajet.coutCorrespondances, 500);
+    expect(option.coutTotal, 2000);
+  });
 }
 
 Stop _stop(String name) => Stop(
@@ -343,4 +433,28 @@ Troncon _tronconSurAxe(Stop depart, Stop arrivee, String axe) => Troncon(
         'minibus': 1000,
         'tricycle': 500,
       },
+    );
+
+Correspondance _correspondance({
+  required String id,
+  required String axeDepartId,
+  required String pointDepartId,
+  required String axeArriveeId,
+  required String pointArriveeId,
+  int dureeMin = 1,
+  int dureeMax = 1,
+  int cout = 0,
+}) =>
+    Correspondance(
+      id: id,
+      axeDepartId: axeDepartId,
+      pointDepartId: pointDepartId,
+      axeArriveeId: axeArriveeId,
+      pointArriveeId: pointArriveeId,
+      type: TypeCorrespondance.marche,
+      dureeMinMinutes: dureeMin,
+      dureeMaxMinutes: dureeMax,
+      cout: cout,
+      valideeTerrain: true,
+      sourceValidation: 'test terrain',
     );
