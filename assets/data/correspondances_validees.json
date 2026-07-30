@@ -1,0 +1,17 @@
+[
+  {
+    "id": "hamdallaye-le-prince-corniche-nord",
+    "axeDepartId": "le-prince",
+    "pointDepartId": "hamdallaye",
+    "axeArriveeId": "corniche-nord",
+    "pointArriveeId": "hamdallaye",
+    "type": "marche",
+    "dureeMinMinutes": 2,
+    "dureeMaxMinutes": 4,
+    "cout": 0,
+    "bidirectionnelle": true,
+    "valideeTerrain": true,
+    "sourceValidation": "Validation terrain fournie par le porteur du projet",
+    "instructions": "Contourner le rond-point selon le point d’arrivée."
+  }
+]

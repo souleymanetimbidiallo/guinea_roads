@@ -64,7 +64,8 @@ void main() {
             axeArriveeId: 'axe-b',
             pointArriveeId: 'hub-b',
             type: TypeCorrespondance.marche,
-            dureeMinutes: 5,
+            dureeMinMinutes: 5,
+            dureeMaxMinutes: 5,
             cout: 0,
           ),
         ],
@@ -83,7 +84,8 @@ void main() {
         axeArriveeId: 'axe-b',
         pointArriveeId: 'hub-b',
         type: TypeCorrespondance.tricycle,
-        dureeMinutes: 8,
+        dureeMinMinutes: 8,
+        dureeMaxMinutes: 10,
         cout: 1500,
         valideeTerrain: true,
         sourceValidation: 'Test terrain',
@@ -94,7 +96,8 @@ void main() {
         const CalculCorrespondanceService().calculer(correspondances);
 
     expect(resultat.coutTotal, 1500);
-    expect(resultat.dureeTotaleMinutes, 13);
+    expect(resultat.dureeTotaleMinMinutes, 13);
+    expect(resultat.dureeTotaleMaxMinutes, 15);
     expect(resultat.nombreChangements, 2);
   });
 
@@ -152,7 +155,8 @@ Correspondance _correspondance({
     axeArriveeId: 'axe-b',
     pointArriveeId: 'hub-b',
     type: TypeCorrespondance.marche,
-    dureeMinutes: 5,
+    dureeMinMinutes: 5,
+    dureeMaxMinutes: 5,
     cout: 0,
     bidirectionnelle: bidirectionnelle,
     valideeTerrain: valideeTerrain,

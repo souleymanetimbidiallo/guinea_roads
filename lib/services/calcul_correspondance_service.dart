@@ -2,12 +2,14 @@ import '../models/correspondance.dart';
 
 class PenalitesCorrespondance {
   final int coutTotal;
-  final int dureeTotaleMinutes;
+  final int dureeTotaleMinMinutes;
+  final int dureeTotaleMaxMinutes;
   final int nombreChangements;
 
   const PenalitesCorrespondance({
     required this.coutTotal,
-    required this.dureeTotaleMinutes,
+    required this.dureeTotaleMinMinutes,
+    required this.dureeTotaleMaxMinutes,
     required this.nombreChangements,
   });
 }
@@ -28,7 +30,8 @@ class CalculCorrespondanceService {
 
   PenalitesCorrespondance calculer(Iterable<Correspondance> correspondances) {
     var coutTotal = 0;
-    var dureeTotaleMinutes = 0;
+    var dureeTotaleMinMinutes = 0;
+    var dureeTotaleMaxMinutes = 0;
     var nombreChangements = 0;
 
     for (final correspondance in correspondances) {
@@ -36,13 +39,15 @@ class CalculCorrespondanceService {
         throw CorrespondanceNonValideeException(correspondance.id);
       }
       coutTotal += correspondance.cout;
-      dureeTotaleMinutes += correspondance.dureeMinutes;
+      dureeTotaleMinMinutes += correspondance.dureeMinMinutes;
+      dureeTotaleMaxMinutes += correspondance.dureeMaxMinutes;
       nombreChangements++;
     }
 
     return PenalitesCorrespondance(
       coutTotal: coutTotal,
-      dureeTotaleMinutes: dureeTotaleMinutes,
+      dureeTotaleMinMinutes: dureeTotaleMinMinutes,
+      dureeTotaleMaxMinutes: dureeTotaleMaxMinutes,
       nombreChangements: nombreChangements,
     );
   }
