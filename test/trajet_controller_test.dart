@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:guinea_roads/controllers/trajet_controller.dart';
+import 'package:guinea_roads/models/correspondance.dart';
 import 'package:guinea_roads/models/stop.dart';
 import 'package:guinea_roads/models/tarification.dart';
 import 'package:guinea_roads/models/troncon.dart';
@@ -268,6 +269,40 @@ void main() {
     expect(taxi.tarifV2!.nombreTranches, 1);
     expect(taxi.coutTotal, 2000);
   });
+
+  test('utilise la correspondance piétonne validée à Hamdallaye', () async {
+    final controller = TrajetController(
+      firestoreLoader: () async => [],
+    );
+    await controller.loadTronconsFromFirestore();
+    final stops = controller.extractAllStops();
+    final kipe = stops.singleWhere((stop) => stop.name == 'Kipé');
+    final bambeto = stops.singleWhere((stop) => stop.name == 'Bambeto');
+
+    final trajet = controller.getMultiAxeTrajet(kipe, bambeto)!;
+
+    expect(trajet.correspondances, hasLength(1));
+    expect(trajet.correspondances.single.lieu, 'Hamdallaye');
+    expect(trajet.correspondances.single.type, TypeCorrespondance.marche);
+    expect(trajet.dureeCorrespondancesMin, 2);
+    expect(trajet.dureeCorrespondancesMax, 4);
+  });
+
+  test('refuse un changement d’axe sans correspondance validée', () {
+    final depart = _stopSurAxe('Départ', 'axe-a');
+    final jonctionA = _stopSurAxe('Jonction', 'axe-a');
+    final jonctionB = _stopSurAxe('Jonction', 'axe-b');
+    final arrivee = _stopSurAxe('Arrivée', 'axe-b');
+    final controller = TrajetController()
+      ..allTroncons = [
+        _tronconSurAxe(depart, jonctionA, 'Axe A'),
+        _tronconSurAxe(jonctionB, arrivee, 'Axe B'),
+      ];
+
+    final trajets = controller.getAlternativeTrajets(depart, arrivee);
+
+    expect(trajets, isEmpty);
+  });
 }
 
 Stop _stop(String name) => Stop(
@@ -283,6 +318,26 @@ Troncon _troncon(Stop depart, Stop arrivee) => Troncon(
       depart: depart,
       arrivee: arrivee,
       axe: 'test',
+      prixParType: const {
+        'taxi': 2000,
+        'minibus': 1000,
+        'tricycle': 500,
+      },
+    );
+
+Stop _stopSurAxe(String name, String axe) => Stop(
+      id: '${name.toLowerCase()}-$axe',
+      name: name,
+      latitude: 0,
+      longitude: 0,
+      order: 0,
+      axe: axe,
+    );
+
+Troncon _tronconSurAxe(Stop depart, Stop arrivee, String axe) => Troncon(
+      depart: depart,
+      arrivee: arrivee,
+      axe: axe,
       prixParType: const {
         'taxi': 2000,
         'minibus': 1000,

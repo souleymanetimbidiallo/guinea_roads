@@ -72,6 +72,21 @@ class Correspondance {
     );
   }
 
+  String get lieu {
+    final mots = pointDepartId.split(RegExp(r'[-_]'));
+    return mots
+        .where((mot) => mot.isNotEmpty)
+        .map((mot) => '${mot[0].toUpperCase()}${mot.substring(1)}')
+        .join(' ');
+  }
+
+  String get libelleType => switch (type) {
+        TypeCorrespondance.marche => 'À pied',
+        TypeCorrespondance.taxiLocal => 'Taxi local',
+        TypeCorrespondance.tricycle => 'Tricycle',
+        TypeCorrespondance.minibus => 'Minibus',
+      };
+
   bool relie(String axeId, String pointId) {
     if (axeDepartId == axeId && pointDepartId == pointId) return true;
     return bidirectionnelle &&

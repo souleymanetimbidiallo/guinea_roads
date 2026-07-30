@@ -6,7 +6,9 @@ import '../models/troncon.dart';
 import '../models/trajet.dart';
 import '../models/transport_option.dart';
 import '../models/tarification.dart';
+import '../models/correspondance.dart';
 import '../services/calcul_tarifaire_service.dart';
+import '../services/correspondance_data_service.dart';
 import '../services/firestore_service.dart';
 import '../services/google_directions_service.dart';
 import '../services/tarification_data_service.dart';
@@ -15,16 +17,20 @@ class TrajetController {
   TrajetController({
     Future<List<Troncon>> Function()? firestoreLoader,
     Future<List<AxeTarifaire>> Function()? tarificationLoader,
+    Future<List<Correspondance>> Function()? correspondanceLoader,
     GoogleRoutesService? directionsService,
   })  : _firestoreLoader = firestoreLoader,
         _tarificationLoader = tarificationLoader,
+        _correspondanceLoader = correspondanceLoader,
         _directionsService = directionsService ?? GoogleRoutesService();
 
   List<Troncon> allTroncons = [];
   List<AxeTarifaire> axesTarifaires = [];
+  List<Correspondance> correspondances = [];
   bool loadedFromLocalData = false;
   final Future<List<Troncon>> Function()? _firestoreLoader;
   final Future<List<AxeTarifaire>> Function()? _tarificationLoader;
+  final Future<List<Correspondance>> Function()? _correspondanceLoader;
   final GoogleRoutesService _directionsService;
 
   Future<void> loadTronconsFromFirestore() async {
@@ -42,6 +48,20 @@ class TrajetController {
       await loadTronconsFromLocalJson();
     }
     await _loadTarificationPilote();
+    await _loadCorrespondances();
+  }
+
+  Future<void> _loadCorrespondances() async {
+    try {
+      final loader =
+          _correspondanceLoader ?? () => CorrespondanceDataService().charger();
+      correspondances = (await loader())
+          .where((correspondance) => correspondance.valideeTerrain)
+          .toList(growable: false);
+    } catch (error) {
+      correspondances = [];
+      debugPrint('Correspondances indisponibles : changements d’axe refusés.');
+    }
   }
 
   Future<void> _loadTarificationPilote() async {
@@ -100,9 +120,19 @@ class TrajetController {
       return [];
     }
 
-    return paths
-        .map((path) => Trajet(troncons: _rebuildTronconsFromPath(path)))
-        .toList();
+    final trajets = <Trajet>[];
+    for (final path in paths) {
+      final construit = _rebuildTronconsFromPath(path);
+      if (construit != null) {
+        trajets.add(
+          Trajet(
+            troncons: construit.troncons,
+            correspondances: construit.correspondances,
+          ),
+        );
+      }
+    }
+    return trajets;
   }
 
   Trajet? _construireTrajetTarifaire(Stop depart, Stop arrivee) {
@@ -241,33 +271,86 @@ class TrajetController {
     return null;
   }
 
-  List<Troncon> _rebuildTronconsFromPath(List<String> path) {
-    List<Troncon> tronconsPath = [];
+  _TrajetConstruit? _rebuildTronconsFromPath(List<String> path) {
+    var possibilites = <_TrajetConstruit>[
+      const _TrajetConstruit(troncons: [], correspondances: []),
+    ];
     for (int i = 0; i < path.length - 1; i++) {
       final from = path[i];
       final to = path[i + 1];
+      final candidats = allTroncons
+          .where(
+            (troncon) =>
+                (_nomNormalise(troncon.depart.name) == from &&
+                    _nomNormalise(troncon.arrivee.name) == to) ||
+                (_nomNormalise(troncon.depart.name) == to &&
+                    _nomNormalise(troncon.arrivee.name) == from),
+          )
+          .map(
+            (original) => _nomNormalise(original.depart.name) == from
+                ? original
+                : Troncon(
+                    depart: original.arrivee,
+                    arrivee: original.depart,
+                    axe: original.axe,
+                    prixParType: original.prixParType,
+                  ),
+          )
+          .toList();
 
-      final original = allTroncons.firstWhere(
-        (t) =>
-            (t.depart.name.toLowerCase().trim() == from &&
-                t.arrivee.name.toLowerCase().trim() == to) ||
-            (t.depart.name.toLowerCase().trim() == to &&
-                t.arrivee.name.toLowerCase().trim() == from),
-        orElse: () => throw Exception('Tronçon manquant entre $from et $to'),
-      );
-
-      final troncon = original.depart.name.toLowerCase().trim() == from
-          ? original
-          : Troncon(
-              depart: original.arrivee,
-              arrivee: original.depart,
-              axe: original.axe,
-              prixParType: original.prixParType,
-            );
-
-      tronconsPath.add(troncon);
+      final suivantes = <_TrajetConstruit>[];
+      for (final possibilite in possibilites) {
+        for (final candidat in candidats) {
+          Correspondance? correspondance;
+          if (possibilite.troncons.isNotEmpty) {
+            final precedent = possibilite.troncons.last;
+            if (_slug(precedent.axe) != _slug(candidat.axe)) {
+              correspondance = _trouverCorrespondance(
+                precedent.axe,
+                candidat.axe,
+                candidat.depart.name,
+              );
+              if (correspondance == null) continue;
+            }
+          }
+          suivantes.add(
+            _TrajetConstruit(
+              troncons: [...possibilite.troncons, candidat],
+              correspondances: [
+                ...possibilite.correspondances,
+                if (correspondance != null) correspondance,
+              ],
+            ),
+          );
+        }
+      }
+      possibilites = suivantes;
+      if (possibilites.isEmpty) return null;
     }
-    return tronconsPath;
+    return possibilites.first;
+  }
+
+  Correspondance? _trouverCorrespondance(
+    String axeDepuis,
+    String axeVers,
+    String point,
+  ) {
+    final depuis = _slug(axeDepuis);
+    final vers = _slug(axeVers);
+    final pointId = _slug(point);
+    for (final correspondance in correspondances) {
+      final sensDirect = correspondance.axeDepartId == depuis &&
+          correspondance.axeArriveeId == vers &&
+          correspondance.pointDepartId == pointId &&
+          correspondance.pointArriveeId == pointId;
+      final sensInverse = correspondance.bidirectionnelle &&
+          correspondance.axeDepartId == vers &&
+          correspondance.axeArriveeId == depuis &&
+          correspondance.pointDepartId == pointId &&
+          correspondance.pointArriveeId == pointId;
+      if (sensDirect || sensInverse) return correspondance;
+    }
+    return null;
   }
 
   Map<String, List<String>> _buildGraph() {
@@ -375,14 +458,20 @@ class TrajetController {
       0,
       (total, metric) => total + (metric['distance'] ?? 0),
     );
-    final totalDuration = metrics.fold<double>(
+    final drivingDuration = metrics.fold<double>(
       0,
       (total, metric) => total + (metric['duration'] ?? 0),
     );
+    final durationMin =
+        drivingDuration + trajet.dureeCorrespondancesMin.toDouble();
+    final durationMax =
+        drivingDuration + trajet.dureeCorrespondancesMax.toDouble();
 
     return {
       'distance': totalDistance,
-      'duration': totalDuration,
+      'duration': (durationMin + durationMax) / 2,
+      'durationMin': durationMin,
+      'durationMax': durationMax,
     };
   }
 
@@ -402,6 +491,19 @@ class TrajetController {
   }
 }
 
+String _nomNormalise(String valeur) => valeur.toLowerCase().trim();
+
+String _slug(String valeur) {
+  return _nomNormalise(valeur)
+      .replaceAll(RegExp(r'[àáâä]'), 'a')
+      .replaceAll(RegExp(r'[èéêë]'), 'e')
+      .replaceAll(RegExp(r'[ìíîï]'), 'i')
+      .replaceAll(RegExp(r'[òóôö]'), 'o')
+      .replaceAll(RegExp(r'[ùúûü]'), 'u')
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+}
+
 int _countModeChanges(List<String> modes) {
   var changements = 0;
   for (var index = 1; index < modes.length; index++) {
@@ -418,4 +520,14 @@ class _TransportCandidate {
 
   final List<String> modes;
   final int cout;
+}
+
+class _TrajetConstruit {
+  const _TrajetConstruit({
+    required this.troncons,
+    required this.correspondances,
+  });
+
+  final List<Troncon> troncons;
+  final List<Correspondance> correspondances;
 }

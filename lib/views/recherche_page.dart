@@ -166,7 +166,7 @@ class _RecherchePageState extends State<RecherchePage> {
                     const SizedBox(width: 16),
                     _buildMetric(
                       Icons.schedule_rounded,
-                      '${variant.duration.toStringAsFixed(0)} min',
+                      variant.libelleDuree,
                     ),
                     const SizedBox(width: 16),
                     _buildMetric(
@@ -206,6 +206,21 @@ class _RecherchePageState extends State<RecherchePage> {
                     style: TextStyle(
                       color: colors.tertiary,
                       fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                if (option.trajet.correspondances.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ...option.trajet.correspondances.map(
+                    (correspondance) => Text(
+                      'Correspondance à ${correspondance.lieu} • '
+                      '${correspondance.libelleType.toLowerCase()} '
+                      '${correspondance.dureeMinMinutes}–'
+                      '${correspondance.dureeMaxMinutes} min',
+                      style: TextStyle(
+                        color: colors.tertiary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -306,6 +321,8 @@ class _RecherchePageState extends State<RecherchePage> {
                       option: option,
                       distance: metrics[index]['distance'] ?? 0,
                       duration: metrics[index]['duration'] ?? 0,
+                      durationMin: metrics[index]['durationMin'] ?? 0,
+                      durationMax: metrics[index]['durationMax'] ?? 0,
                     ),
                   ),
           ];
@@ -617,11 +634,23 @@ class _TrajetVariant {
     required this.option,
     required this.distance,
     required this.duration,
+    required this.durationMin,
+    required this.durationMax,
   });
 
   final TransportOption option;
   final double distance;
   final double duration;
+  final double durationMin;
+  final double durationMax;
+
+  String get libelleDuree {
+    if (option.trajet.correspondances.isEmpty) {
+      return '${duration.toStringAsFixed(0)} min';
+    }
+    return '${durationMin.toStringAsFixed(0)}–'
+        '${durationMax.toStringAsFixed(0)} min';
+  }
 
   List<String> get etapesIntermediaires {
     final troncons = option.trajet.troncons;

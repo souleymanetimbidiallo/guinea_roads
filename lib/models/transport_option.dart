@@ -37,13 +37,15 @@ class TransportOption {
   final TarifTrajet? tarifV2;
 
   int get coutTotal {
-    if (tarifV2 != null) return tarifV2!.prixTotal;
+    if (tarifV2 != null) {
+      return tarifV2!.prixTotal + trajet.coutCorrespondances;
+    }
 
     var total = 0;
     for (var index = 0; index < trajet.troncons.length; index++) {
       total += trajet.troncons[index].prixParType[modesParTroncon[index]] ?? 0;
     }
-    return total;
+    return total + trajet.coutCorrespondances;
   }
 
   List<String> get modesUtilises {
