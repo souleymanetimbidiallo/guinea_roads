@@ -76,6 +76,9 @@ class TrajetController {
   }) {
     if (maxTrajets <= 0) return [];
 
+    final trajetTarifaire = _construireTrajetTarifaire(depart, arrivee);
+    if (trajetTarifaire != null) return [trajetTarifaire];
+
     final graph = _buildGraph();
     final start = depart.name.toLowerCase().trim();
     final goal = arrivee.name.toLowerCase().trim();
@@ -100,6 +103,49 @@ class TrajetController {
     return paths
         .map((path) => Trajet(troncons: _rebuildTronconsFromPath(path)))
         .toList();
+  }
+
+  Trajet? _construireTrajetTarifaire(Stop depart, Stop arrivee) {
+    for (final axe in axesTarifaires) {
+      final pointDepart = axe.pointPourNom(depart.name);
+      final pointArrivee = axe.pointPourNom(arrivee.name);
+      if (pointDepart == null || pointArrivee == null) continue;
+      if (pointDepart.position == pointArrivee.position) return null;
+
+      final points = axe.pointsPourTrajet(pointDepart, pointArrivee);
+      final troncons = <Troncon>[];
+      for (var index = 0; index < points.length - 1; index++) {
+        final pointActuel = points[index];
+        final pointSuivant = points[index + 1];
+        final tranche = axe.tranchePourSegment(
+          pointActuel.position,
+          pointSuivant.position,
+        );
+        if (tranche == null) return null;
+
+        troncons.add(
+          Troncon(
+            depart: _stopDepuisPoint(pointActuel, axe),
+            arrivee: _stopDepuisPoint(pointSuivant, axe),
+            axe: axe.nom,
+            prixParType: tranche.tarifsParTransport,
+          ),
+        );
+      }
+      return troncons.isEmpty ? null : Trajet(troncons: troncons);
+    }
+    return null;
+  }
+
+  Stop _stopDepuisPoint(PointTarifaire point, AxeTarifaire axe) {
+    return Stop(
+      id: 'tarif-${axe.id}-${point.id}',
+      name: point.nom,
+      latitude: point.latitude,
+      longitude: point.longitude,
+      order: point.position.round(),
+      axe: axe.nom,
+    );
   }
 
   List<TransportOption> getTransportOptions(Trajet trajet) {
@@ -309,6 +355,12 @@ class TrajetController {
     for (var troncon in allTroncons) {
       stopsSet[troncon.depart.name.toLowerCase().trim()] = troncon.depart;
       stopsSet[troncon.arrivee.name.toLowerCase().trim()] = troncon.arrivee;
+    }
+    for (final axe in axesTarifaires) {
+      for (final point in <PointTarifaire>[...axe.limites, ...axe.reperes]) {
+        final stop = _stopDepuisPoint(point, axe);
+        stopsSet[stop.name.toLowerCase().trim()] = stop;
+      }
     }
     return stopsSet.values.toList();
   }

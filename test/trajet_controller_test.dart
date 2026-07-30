@@ -205,6 +205,69 @@ void main() {
     expect(taxi.tarifV2!.nombreTranches, 2);
     expect(taxi.coutTotal, 4000);
   });
+
+  test('expose un repère pilote sans modifier les tronçons V1', () async {
+    final controller = TrajetController(
+      firestoreLoader: () async => [],
+    );
+    await controller.loadTronconsFromFirestore();
+
+    expect(controller.allTroncons, hasLength(18));
+    expect(
+      controller.extractAllStops().map((stop) => stop.name),
+      contains('Kobayah Pharmacie Dara'),
+    );
+  });
+
+  test('construit un trajet V2 jusqu’au repère Kobayah', () async {
+    final controller = TrajetController(
+      firestoreLoader: () async => [],
+    );
+    await controller.loadTronconsFromFirestore();
+    final stops = controller.extractAllStops();
+    final sonfonia = stops.singleWhere((stop) => stop.name == 'Sonfonia T7');
+    final kobayah = stops.singleWhere(
+      (stop) => stop.name == 'Kobayah Pharmacie Dara',
+    );
+
+    final trajet = controller.getMultiAxeTrajet(sonfonia, kobayah)!;
+    final taxi = controller.getTransportOptions(trajet).singleWhere(
+          (option) =>
+              option.modesUtilises.length == 1 &&
+              option.modesUtilises.single == 'taxi',
+        );
+
+    expect(trajet.troncons, hasLength(2));
+    expect(
+        trajet.troncons.first.arrivee.name, 'Université Général Lansana Conté');
+    expect(taxi.tarifV2!.nombreTranches, 2);
+    expect(taxi.coutTotal, 4000);
+  });
+
+  test('facture une tranche entre Kobayah et Lambanyi', () async {
+    final controller = TrajetController(
+      firestoreLoader: () async => [],
+    );
+    await controller.loadTronconsFromFirestore();
+    final stops = controller.extractAllStops();
+    final kobayah = stops.singleWhere(
+      (stop) => stop.name == 'Kobayah Pharmacie Dara',
+    );
+    final lambanyi = stops.singleWhere(
+      (stop) => stop.name == 'Lambanyi (Ciment-Guinée)',
+    );
+
+    final trajet = controller.getMultiAxeTrajet(kobayah, lambanyi)!;
+    final taxi = controller.getTransportOptions(trajet).singleWhere(
+          (option) =>
+              option.modesUtilises.length == 1 &&
+              option.modesUtilises.single == 'taxi',
+        );
+
+    expect(trajet.troncons, hasLength(1));
+    expect(taxi.tarifV2!.nombreTranches, 1);
+    expect(taxi.coutTotal, 2000);
+  });
 }
 
 Stop _stop(String name) => Stop(
