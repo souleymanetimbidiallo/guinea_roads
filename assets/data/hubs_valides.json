@@ -1,0 +1,13 @@
+[
+  {
+    "id": "hamdallaye",
+    "nom": "Hamdallaye",
+    "points": [
+      {"axeId": "le-prince", "pointId": "hamdallaye"},
+      {"axeId": "corniche-nord", "pointId": "hamdallaye"}
+    ],
+    "correspondanceIds": ["hamdallaye-le-prince-corniche-nord"],
+    "valideTerrain": true,
+    "sourceValidation": "Validation terrain fournie par le porteur du projet"
+  }
+]
