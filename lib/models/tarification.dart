@@ -1,9 +1,24 @@
-class LimiteTarifaire {
+abstract interface class PointTarifaire {
+  String get id;
+  String get nom;
+  double get latitude;
+  double get longitude;
+  double get position;
+  List<String> get aliases;
+}
+
+class LimiteTarifaire implements PointTarifaire {
+  @override
   final String id;
+  @override
   final String nom;
+  @override
   final double latitude;
+  @override
   final double longitude;
+  @override
   final double position;
+  @override
   final List<String> aliases;
 
   const LimiteTarifaire({
@@ -27,12 +42,18 @@ class LimiteTarifaire {
   }
 }
 
-class RepereTarifaire {
+class RepereTarifaire implements PointTarifaire {
+  @override
   final String id;
+  @override
   final String nom;
+  @override
   final double latitude;
+  @override
   final double longitude;
+  @override
   final double position;
+  @override
   final List<String> aliases;
 
   const RepereTarifaire({
@@ -147,15 +168,51 @@ class AxeTarifaire {
   }
 
   double? positionPourNom(String nomPoint) {
+    return pointPourNom(nomPoint)?.position;
+  }
+
+  PointTarifaire? pointPourNom(String nomPoint) {
     final nomNormalise = _normaliserNom(nomPoint);
-    for (final limite in limites) {
-      if (_correspondAuNom(limite.nom, limite.aliases, nomNormalise)) {
-        return limite.position;
+    for (final point in <PointTarifaire>[...limites, ...reperes]) {
+      if (_correspondAuNom(point.nom, point.aliases, nomNormalise)) {
+        return point;
       }
     }
-    for (final repere in reperes) {
-      if (_correspondAuNom(repere.nom, repere.aliases, nomNormalise)) {
-        return repere.position;
+    return null;
+  }
+
+  List<PointTarifaire> pointsPourTrajet(
+    PointTarifaire depart,
+    PointTarifaire arrivee,
+  ) {
+    final positionMinimum =
+        depart.position < arrivee.position ? depart.position : arrivee.position;
+    final positionMaximum =
+        depart.position < arrivee.position ? arrivee.position : depart.position;
+    final points = <PointTarifaire>[
+      depart,
+      ...limites.where(
+        (limite) =>
+            limite.position > positionMinimum &&
+            limite.position < positionMaximum,
+      ),
+      arrivee,
+    ]..sort((a, b) => a.position.compareTo(b.position));
+
+    if (depart.position > arrivee.position) {
+      return points.reversed.toList(growable: false);
+    }
+    return List.unmodifiable(points);
+  }
+
+  TrancheTarifaire? tranchePourSegment(
+    double positionDepart,
+    double positionArrivee,
+  ) {
+    final milieu = (positionDepart + positionArrivee) / 2;
+    for (final tranche in tranches) {
+      if (milieu >= tranche.positionDebut && milieu <= tranche.positionFin) {
+        return tranche;
       }
     }
     return null;
