@@ -8,12 +8,15 @@ import '../models/transport_option.dart';
 import '../models/tarification.dart';
 import '../models/correspondance.dart';
 import '../models/profil_transport.dart';
+import '../models/hub_mobilite.dart';
+import '../models/segment_transport.dart';
 import '../services/calcul_tarifaire_service.dart';
 import '../services/calcul_duree_transport_service.dart';
 import '../services/correspondance_data_service.dart';
 import '../services/firestore_service.dart';
 import '../services/google_directions_service.dart';
 import '../services/profil_transport_data_service.dart';
+import '../services/hub_data_service.dart';
 import '../services/tarification_data_service.dart';
 
 enum EchecRechercheTrajet {
@@ -29,23 +32,29 @@ class TrajetController {
     Future<List<AxeTarifaire>> Function()? tarificationLoader,
     Future<List<Correspondance>> Function()? correspondanceLoader,
     Future<List<ProfilTransport>> Function()? profilTransportLoader,
+    Future<List<HubMobilite>> Function()? hubLoader,
     GoogleRoutesService? directionsService,
   })  : _firestoreLoader = firestoreLoader,
         _tarificationLoader = tarificationLoader,
         _correspondanceLoader = correspondanceLoader,
         _profilTransportLoader = profilTransportLoader,
+        _hubLoader = hubLoader,
         _directionsService = directionsService ?? GoogleRoutesService();
 
   List<Troncon> allTroncons = [];
   List<AxeTarifaire> axesTarifaires = [];
   List<Correspondance> correspondances = [];
   List<ProfilTransport> profilsTransport = [];
+  List<HubMobilite> hubs = [];
+  List<SegmentTransport> get segmentsTransport =>
+      allTroncons.map(SegmentTransport.depuisTroncon).toList(growable: false);
   EchecRechercheTrajet dernierEchec = EchecRechercheTrajet.aucun;
   bool loadedFromLocalData = false;
   final Future<List<Troncon>> Function()? _firestoreLoader;
   final Future<List<AxeTarifaire>> Function()? _tarificationLoader;
   final Future<List<Correspondance>> Function()? _correspondanceLoader;
   final Future<List<ProfilTransport>> Function()? _profilTransportLoader;
+  final Future<List<HubMobilite>> Function()? _hubLoader;
   final GoogleRoutesService _directionsService;
 
   Future<void> loadTronconsFromFirestore() async {
@@ -65,6 +74,19 @@ class TrajetController {
     await _loadTarificationPilote();
     await _loadCorrespondances();
     await _loadProfilsTransport();
+    await _loadHubs();
+  }
+
+  Future<void> _loadHubs() async {
+    try {
+      final loader = _hubLoader ?? () => HubDataService().charger();
+      hubs = (await loader())
+          .where((hub) => hub.valideTerrain)
+          .toList(growable: false);
+    } catch (error) {
+      hubs = [];
+      debugPrint('Hubs indisponibles : correspondances simples utilisées.');
+    }
   }
 
   Future<void> _loadProfilsTransport() async {
