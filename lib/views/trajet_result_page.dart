@@ -498,6 +498,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                     .followedBy([trajet!.troncons.last.arrivee]).toList(),
                 title: '${widget.depart.name} → ${widget.arrivee.name}',
                 tronconModes: _buildTronconModes(),
+                correspondances: trajet!.correspondances,
               ),
             ),
           );
