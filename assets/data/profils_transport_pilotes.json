@@ -1,0 +1,35 @@
+[
+  {
+    "transport": "taxi",
+    "facteurDureeMin": 1.0,
+    "facteurDureeMax": 1.15,
+    "attenteMinMinutes": 2,
+    "attenteMaxMinutes": 6,
+    "tempsParArretMinutes": 0.3,
+    "facteurCongestionMax": 1.5,
+    "valideTerrain": false,
+    "source": "Hypothèses pilotes à mesurer sur le terrain"
+  },
+  {
+    "transport": "minibus",
+    "facteurDureeMin": 1.15,
+    "facteurDureeMax": 1.4,
+    "attenteMinMinutes": 5,
+    "attenteMaxMinutes": 12,
+    "tempsParArretMinutes": 1.0,
+    "facteurCongestionMax": 1.7,
+    "valideTerrain": false,
+    "source": "Hypothèses pilotes à mesurer sur le terrain"
+  },
+  {
+    "transport": "tricycle",
+    "facteurDureeMin": 0.9,
+    "facteurDureeMax": 1.1,
+    "attenteMinMinutes": 2,
+    "attenteMaxMinutes": 5,
+    "tempsParArretMinutes": 0.2,
+    "facteurCongestionMax": 1.25,
+    "valideTerrain": false,
+    "source": "Hypothèses pilotes à mesurer sur le terrain"
+  }
+]

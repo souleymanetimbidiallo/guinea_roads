@@ -38,6 +38,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   double duration = 0;
   double durationMin = 0;
   double durationMax = 0;
+  bool profilsValidesTerrain = true;
   bool isFavorite = false;
   bool favoriteLoading = false;
 
@@ -53,7 +54,12 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     final result = widget.selectedTrajet ??
         controller.getMultiAxeTrajet(widget.depart, widget.arrivee);
     if (result != null) {
-      final metrics = await controller.getDistanceAndDuration(result);
+      final option = TransportOption(
+        trajet: result,
+        modesParTroncon: widget.modes,
+        tarifV2: widget.tarifV2,
+      );
+      final metrics = await controller.getDistanceAndDurationForOption(option);
       var favorite = false;
       try {
         final trajetEnregistre = _trajetEnregistre();
@@ -72,6 +78,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         duration = metrics['duration']!;
         durationMin = metrics['durationMin']!;
         durationMax = metrics['durationMax']!;
+        profilsValidesTerrain = metrics['profilsValidesTerrain'] == 1;
         isFavorite = favorite;
         isLoading = false;
       });
@@ -256,7 +263,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                   child: _summaryMetric(
                     Icons.schedule_rounded,
                     'Durée',
-                    trajet!.correspondances.isEmpty
+                    (durationMax - durationMin).abs() < 0.5
                         ? '${duration.toStringAsFixed(0)} min'
                         : '${durationMin.toStringAsFixed(0)}–'
                             '${durationMax.toStringAsFixed(0)} min',
@@ -418,6 +425,16 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
           ),
           const SizedBox(height: 18),
           _buildModeInfo(widget.modes, cost),
+          if (!profilsValidesTerrain)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Durée pilote • coefficients à valider sur le terrain',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           if (widget.tarifV2 != null) ...[
             const SizedBox(height: 8),
             Text(
