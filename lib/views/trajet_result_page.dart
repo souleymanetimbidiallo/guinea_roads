@@ -39,6 +39,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   double durationMin = 0;
   double durationMax = 0;
   bool profilsValidesTerrain = true;
+  bool congestionPiloteAppliquee = false;
+  bool congestionValideeTerrain = true;
   bool isFavorite = false;
   bool favoriteLoading = false;
 
@@ -79,6 +81,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         durationMin = metrics['durationMin']!;
         durationMax = metrics['durationMax']!;
         profilsValidesTerrain = metrics['profilsValidesTerrain'] == 1;
+        congestionPiloteAppliquee = metrics['congestionPiloteAppliquee'] == 1;
+        congestionValideeTerrain = metrics['congestionValideeTerrain'] == 1;
         isFavorite = favorite;
         isLoading = false;
       });
@@ -430,6 +434,17 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 'Durée pilote • coefficients à valider sur le terrain',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          if (congestionPiloteAppliquee && !congestionValideeTerrain)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Congestion estimée selon le créneau actuel'
+                ' • hypothèse à valider sur le terrain',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
