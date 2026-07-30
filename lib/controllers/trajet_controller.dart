@@ -112,7 +112,10 @@ class TrajetController {
       graph,
       start,
       goal,
-      maxPaths: maxTrajets,
+      // Des raccourcis topologiques peuvent être invalides parce qu’ils
+      // changent d’axe sans correspondance. On explore donc davantage de
+      // candidats avant de retenir uniquement les trajets autorisés.
+      maxPaths: maxTrajets * 20,
       maxDetourEdges: maxDetourTroncons,
     );
     if (paths.isEmpty) {
@@ -130,6 +133,7 @@ class TrajetController {
             correspondances: construit.correspondances,
           ),
         );
+        if (trajets.length >= maxTrajets) break;
       }
     }
     return trajets;
