@@ -516,6 +516,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                 title: '${widget.depart.name} → ${widget.arrivee.name}',
                 tronconModes: _buildTronconModes(),
                 correspondances: trajet!.correspondances,
+                corridors: controller.corridors,
               ),
             ),
           );

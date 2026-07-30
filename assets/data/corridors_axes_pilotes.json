@@ -1,0 +1,47 @@
+[
+  {
+    "axeId": "corniche-nord",
+    "nom": "Corniche Nord",
+    "valideTerrain": false,
+    "source": "Points V1 existants à contrôler sur le terrain",
+    "points": [
+      {"id":"hamdallaye","nom":"Hamdallaye","latitude":9.572402,"longitude":-13.656524,"ordre":0},
+      {"id":"kipe","nom":"Kipé","latitude":9.611226,"longitude":-13.645598,"ordre":1},
+      {"id":"lambanyi-ciment","nom":"Lambanyi (Ciment-Guinée)","latitude":9.64364,"longitude":-13.610821,"ordre":2},
+      {"id":"uglc","nom":"Université Lansana Conté","latitude":9.6805,"longitude":-13.579675,"ordre":3},
+      {"id":"sonfonia-t7","nom":"Sonfonia T7","latitude":9.669334,"longitude":-13.558108,"ordre":4}
+    ]
+  },
+  {
+    "axeId": "le-prince",
+    "nom": "Le Prince",
+    "valideTerrain": false,
+    "source": "Points V1 existants à contrôler sur le terrain",
+    "points": [
+      {"id":"port","nom":"Port","latitude":9.515226,"longitude":-13.713946,"ordre":0},
+      {"id":"dixinn","nom":"Dixinn","latitude":9.548472,"longitude":-13.675156,"ordre":1},
+      {"id":"hamdallaye","nom":"Hamdallaye","latitude":9.572402,"longitude":-13.656524,"ordre":2},
+      {"id":"bambeto","nom":"Bambeto","latitude":9.588694,"longitude":-13.631508,"ordre":3},
+      {"id":"cosa","nom":"Cosa","latitude":9.605958,"longitude":-13.612253,"ordre":4},
+      {"id":"enco-5","nom":"Enco 5","latitude":9.628541,"longitude":-13.593371,"ordre":5},
+      {"id":"sonfonia-t7","nom":"Sonfonia T7","latitude":9.669334,"longitude":-13.558108,"ordre":6},
+      {"id":"cimenterie","nom":"Cimenterie","latitude":9.681746,"longitude":-13.534056,"ordre":7},
+      {"id":"kagbelen","nom":"Kagbelen","latitude":9.715614,"longitude":-13.501107,"ordre":8}
+    ]
+  },
+  {
+    "axeId": "autoroute-fidel-castro",
+    "nom": "Autoroute Fidel Castro",
+    "valideTerrain": false,
+    "source": "Points V1 existants à contrôler sur le terrain",
+    "points": [
+      {"id":"port","nom":"Port","latitude":9.515226,"longitude":-13.713946,"ordre":0},
+      {"id":"madina","nom":"Madina","latitude":9.545552,"longitude":-13.669683,"ordre":1},
+      {"id":"aeroport","nom":"Aéroport","latitude":9.574932,"longitude":-13.622695,"ordre":2},
+      {"id":"matoto","nom":"Matoto","latitude":9.611437,"longitude":-13.594349,"ordre":3},
+      {"id":"enta","nom":"Enta","latitude":9.641973,"longitude":-13.563614,"ordre":4},
+      {"id":"lansanayah","nom":"Lansanayah","latitude":9.668182,"longitude":-13.524683,"ordre":5},
+      {"id":"km-36","nom":"Km 36","latitude":9.703635,"longitude":-13.498099,"ordre":6}
+    ]
+  }
+]
