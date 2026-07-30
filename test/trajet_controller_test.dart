@@ -183,6 +183,16 @@ void main() {
     expect(stop.longitude, -13.610821);
   });
 
+  test('recherche un arrêt sans dépendre des accents ou de l’ancien nom', () {
+    final kipe = _stop('Kipé');
+    final lambanyi = _stop('Lambanyi (Ciment-Guinée)');
+
+    expect(kipe.correspondARecherche('kipe'), isTrue);
+    expect(lambanyi.correspondARecherche('lambangni'), isTrue);
+    expect(lambanyi.correspondARecherche('ciment guinee'), isTrue);
+    expect(kipe.correspondARecherche('bambeto'), isFalse);
+  });
+
   test('applique deux tranches sur le trajet pilote complet', () async {
     final controller = TrajetController(
       firestoreLoader: () async => [],

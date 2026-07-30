@@ -35,4 +35,33 @@ class Stop {
     }
     return nom;
   }
+
+  bool correspondARecherche(String recherche) {
+    final termes = <String>[
+      name,
+      if (name == 'Lambanyi (Ciment-Guinée)') ...[
+        'Lambangni',
+        'Lambanyi ciment',
+        'Ciment Guinée',
+      ],
+    ];
+    final requete = normaliserPourRecherche(recherche);
+    return requete.isEmpty ||
+        termes.any(
+          (terme) => normaliserPourRecherche(terme).contains(requete),
+        );
+  }
+
+  static String normaliserPourRecherche(String valeur) {
+    return valeur
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'[àáâä]'), 'a')
+        .replaceAll(RegExp(r'[èéêë]'), 'e')
+        .replaceAll(RegExp(r'[ìíîï]'), 'i')
+        .replaceAll(RegExp(r'[òóôö]'), 'o')
+        .replaceAll(RegExp(r'[ùúûü]'), 'u')
+        .replaceAll(RegExp(r'[ç]'), 'c')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ');
+  }
 }
