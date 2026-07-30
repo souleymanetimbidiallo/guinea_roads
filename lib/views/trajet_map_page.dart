@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../models/correspondance.dart';
 import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../services/google_directions_service.dart';
@@ -10,11 +11,13 @@ class TrajetMapPage extends StatefulWidget {
   final List<Stop> arrets;
   final String title;
   final Map<Troncon, String>? tronconModes;
+  final List<Correspondance> correspondances;
 
   const TrajetMapPage({
     required this.arrets,
     required this.title,
     this.tronconModes,
+    this.correspondances = const [],
     Key? key,
   }) : super(key: key);
 
@@ -66,16 +69,21 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       latLngs.add(latLng);
       final isDepart = index == 0;
       final isArrivee = index == widget.arrets.length - 1;
-      final markerColor = isDepart
-          ? const Color(0xFF087F5B)
-          : isArrivee
-              ? const Color(0xFFC63D36)
-              : const Color(0xFF2474C6);
-      final markerLabel = isDepart
-          ? 'D'
-          : isArrivee
-              ? 'A'
-              : '$index';
+      final correspondance = _correspondancePour(stop);
+      final markerColor = correspondance != null
+          ? const Color(0xFF8E44AD)
+          : isDepart
+              ? const Color(0xFF087F5B)
+              : isArrivee
+                  ? const Color(0xFFC63D36)
+                  : const Color(0xFF2474C6);
+      final markerLabel = correspondance != null
+          ? 'C'
+          : isDepart
+              ? 'D'
+              : isArrivee
+                  ? 'A'
+                  : '$index';
 
       markers.add(
         Marker(
@@ -84,11 +92,15 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
           icon: await _createMarker(markerColor, markerLabel, pixelRatio),
           infoWindow: InfoWindow(
             title: stop.name,
-            snippet: isDepart
-                ? 'Départ'
-                : isArrivee
-                    ? 'Arrivée'
-                    : 'Étape $index',
+            snippet: correspondance != null
+                ? '${correspondance.libelleType} • '
+                    '${correspondance.dureeMinMinutes}–'
+                    '${correspondance.dureeMaxMinutes} min'
+                : isDepart
+                    ? 'Départ'
+                    : isArrivee
+                        ? 'Arrivée'
+                        : 'Étape $index',
           ),
           anchor: const Offset(0.5, 0.5),
           zIndex: isDepart || isArrivee ? 2 : 1,
@@ -112,6 +124,36 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
         trajetsCharges = false;
       });
     }
+  }
+
+  Correspondance? _correspondancePour(Stop stop) {
+    final stopId = _slug(stop.name);
+    for (final correspondance in widget.correspondances) {
+      if (_slug(correspondance.pointDepartId) == stopId ||
+          _slug(correspondance.pointArriveeId) == stopId) {
+        return correspondance;
+      }
+    }
+    return null;
+  }
+
+  int get _dureeCorrespondancesMin => widget.correspondances.fold(
+        0,
+        (total, correspondance) => total + correspondance.dureeMinMinutes,
+      );
+
+  int get _dureeCorrespondancesMax => widget.correspondances.fold(
+        0,
+        (total, correspondance) => total + correspondance.dureeMaxMinutes,
+      );
+
+  String get _libelleDuree {
+    if (widget.correspondances.isEmpty) {
+      return '${totalDuration.toStringAsFixed(0)} min';
+    }
+    final min = totalDuration + _dureeCorrespondancesMin;
+    final max = totalDuration + _dureeCorrespondancesMax;
+    return '${min.toStringAsFixed(0)}–${max.toStringAsFixed(0)} min';
   }
 
   Future<BitmapDescriptor> _createMarker(
@@ -379,7 +421,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
               ),
             ),
           Positioned(
-            bottom: 146,
+            bottom: widget.correspondances.isEmpty ? 146 : 204,
             left: 16,
             child: FloatingActionButton.small(
               onPressed: _centrerSurTrajet,
@@ -415,12 +457,40 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
                           child: _buildMetric(
                             context,
                             Icons.schedule_rounded,
-                            '${totalDuration.toStringAsFixed(0)} min',
+                            _libelleDuree,
                             'Durée',
                           ),
                         ),
                       ],
                     ),
+                    if (widget.correspondances.isNotEmpty) ...[
+                      const Divider(height: 24),
+                      ...widget.correspondances.map(
+                        (correspondance) => Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.directions_walk_rounded,
+                              color: Color(0xFF8E44AD),
+                              size: 21,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Correspondance à ${correspondance.lieu} • '
+                                '${correspondance.dureeMinMinutes}–'
+                                '${correspondance.dureeMaxMinutes} min\n'
+                                '${correspondance.instructions}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const Divider(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -503,4 +573,17 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       ],
     );
   }
+}
+
+String _slug(String valeur) {
+  return valeur
+      .toLowerCase()
+      .trim()
+      .replaceAll(RegExp(r'[àáâä]'), 'a')
+      .replaceAll(RegExp(r'[èéêë]'), 'e')
+      .replaceAll(RegExp(r'[ìíîï]'), 'i')
+      .replaceAll(RegExp(r'[òóôö]'), 'o')
+      .replaceAll(RegExp(r'[ùúûü]'), 'u')
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
 }
