@@ -181,6 +181,13 @@ class AxeTarifaire {
     return null;
   }
 
+  PointTarifaire? pointPourId(String pointId) {
+    for (final point in <PointTarifaire>[...limites, ...reperes]) {
+      if (point.id == pointId) return point;
+    }
+    return null;
+  }
+
   List<PointTarifaire> pointsPourTrajet(
     PointTarifaire depart,
     PointTarifaire arrivee,
