@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/correspondance.dart';
+import '../models/corridor_axe.dart';
 import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../services/google_directions_service.dart';
@@ -12,12 +13,14 @@ class TrajetMapPage extends StatefulWidget {
   final String title;
   final Map<Troncon, String>? tronconModes;
   final List<Correspondance> correspondances;
+  final List<CorridorAxe> corridors;
 
   const TrajetMapPage({
     required this.arrets,
     required this.title,
     this.tronconModes,
     this.correspondances = const [],
+    this.corridors = const [],
     Key? key,
   }) : super(key: key);
 
@@ -256,18 +259,44 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
   void _addFallbackPolyline(int index, Stop from, Stop to) {
     routeWarning =
         'Tracé routier indisponible. La ligne pointillée est approximative.';
+    final corridorPoints = _pointsCorridor(from, to);
     polylines.add(
       Polyline(
         polylineId: PolylineId('fallback-$index'),
-        points: [
-          LatLng(from.latitude, from.longitude),
-          LatLng(to.latitude, to.longitude),
-        ],
+        points: corridorPoints.isEmpty
+            ? [
+                LatLng(from.latitude, from.longitude),
+                LatLng(to.latitude, to.longitude),
+              ]
+            : corridorPoints
+                .map((point) => LatLng(point.latitude, point.longitude))
+                .toList(),
         color: _getColorForTroncon(from.name, to.name),
         width: 4,
         patterns: [PatternItem.dash(16), PatternItem.gap(10)],
       ),
     );
+  }
+
+  List<PointControleAxe> _pointsCorridor(Stop from, Stop to) {
+    String? axe;
+    for (final troncon in widget.tronconModes?.keys ?? const <Troncon>[]) {
+      if ((troncon.depart.name == from.name &&
+              troncon.arrivee.name == to.name) ||
+          (troncon.depart.name == to.name &&
+              troncon.arrivee.name == from.name)) {
+        axe = troncon.axe;
+        break;
+      }
+    }
+    if (axe == null) return const [];
+    final axeId = _slug(axe);
+    for (final corridor in widget.corridors) {
+      if (corridor.axeId == axeId) {
+        return corridor.pointsEntre(from.name, to.name);
+      }
+    }
+    return const [];
   }
 
   Color _getColorForTroncon(String from, String to) {
