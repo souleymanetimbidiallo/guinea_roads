@@ -8,6 +8,13 @@ import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../services/google_directions_service.dart';
 
+/// Formate une fourchette de durée : « 85 min » ou « 85–126 min ».
+String formaterDureeEstimee(double min, double max) {
+  return (max - min).abs() < 0.5
+      ? '${min.toStringAsFixed(0)} min'
+      : '${min.toStringAsFixed(0)}–${max.toStringAsFixed(0)} min';
+}
+
 class TrajetMapPage extends StatefulWidget {
   final List<Stop> arrets;
   final String title;
@@ -15,12 +22,20 @@ class TrajetMapPage extends StatefulWidget {
   final List<Correspondance> correspondances;
   final List<CorridorAxe> corridors;
 
+  /// Durée estimée affichée sur la page d'itinéraire (attente, congestion et
+  /// correspondances comprises). Sans elle, la carte affiche le temps de
+  /// conduite renvoyé par Google Routes.
+  final double? dureeEstimeeMin;
+  final double? dureeEstimeeMax;
+
   const TrajetMapPage({
     required this.arrets,
     required this.title,
     this.tronconModes,
     this.correspondances = const [],
     this.corridors = const [],
+    this.dureeEstimeeMin,
+    this.dureeEstimeeMax,
     Key? key,
   }) : super(key: key);
 
@@ -151,6 +166,11 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       );
 
   String get _libelleDuree {
+    final estimeeMin = widget.dureeEstimeeMin;
+    final estimeeMax = widget.dureeEstimeeMax;
+    if (estimeeMin != null && estimeeMax != null) {
+      return formaterDureeEstimee(estimeeMin, estimeeMax);
+    }
     if (widget.correspondances.isEmpty) {
       return '${totalDuration.toStringAsFixed(0)} min';
     }

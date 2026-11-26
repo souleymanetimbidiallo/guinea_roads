@@ -532,6 +532,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                 tronconModes: _buildTronconModes(),
                 correspondances: trajet!.correspondances,
                 corridors: controller.corridors,
+                dureeEstimeeMin: durationMin,
+                dureeEstimeeMax: durationMax,
               ),
             ),
           );
