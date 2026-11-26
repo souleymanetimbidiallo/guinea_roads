@@ -23,6 +23,10 @@ class ResultatRoutagePondere {
 class RoutagePondereService {
   const RoutagePondereService();
 
+  /// Poids ajouté à une correspondance non validée sur le terrain, pour que
+  /// le routage préfère un changement confirmé quand il en existe un.
+  static const penaliteCorrespondanceAConfirmer = 1.5;
+
   ResultatRoutagePondere? calculer({
     required Iterable<SegmentTransport> segments,
     required Iterable<Correspondance> correspondances,
@@ -52,8 +56,7 @@ class RoutagePondereService {
       }
     }
 
-    for (final correspondance
-        in correspondances.where((item) => item.valideeTerrain)) {
+    for (final correspondance in correspondances) {
       final from =
           '${correspondance.axeDepartId}|${correspondance.pointDepartId}';
       final to =
@@ -61,7 +64,10 @@ class RoutagePondereService {
       final poids = 1 +
           (correspondance.dureeMinMinutes + correspondance.dureeMaxMinutes) /
               20 +
-          correspondance.cout / 5000;
+          correspondance.cout / 5000 +
+          (correspondance.valideeTerrain
+              ? 0
+              : penaliteCorrespondanceAConfirmer);
       graphe.putIfAbsent(from, () => []).add(
             _Arc.correspondance(to, correspondance, poids),
           );

@@ -223,7 +223,7 @@ void main() {
     );
     await controller.loadTronconsFromFirestore();
 
-    expect(controller.allTroncons, hasLength(18));
+    expect(controller.allTroncons, hasLength(35));
     expect(
       controller.extractAllStops().map((stop) => stop.name),
       contains('Kobayah Pharmacie Dara'),
@@ -286,10 +286,11 @@ void main() {
     );
     await controller.loadTronconsFromFirestore();
     final stops = controller.extractAllStops();
-    final kipe = stops.singleWhere((stop) => stop.name == 'Kipé');
-    final bambeto = stops.singleWhere((stop) => stop.name == 'Bambeto');
+    final lambanyi =
+        stops.singleWhere((stop) => stop.name == 'Lambanyi (Ciment-Guinée)');
+    final dixinn = stops.singleWhere((stop) => stop.name == 'Dixinn');
 
-    final trajet = controller.getMultiAxeTrajet(kipe, bambeto)!;
+    final trajet = controller.getMultiAxeTrajet(lambanyi, dixinn)!;
 
     expect(trajet.correspondances, hasLength(1));
     expect(trajet.correspondances.single.lieu, 'Hamdallaye');

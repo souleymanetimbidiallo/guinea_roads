@@ -8,7 +8,7 @@ class CorrespondanceDataService {
   CorrespondanceDataService({AssetBundle? assetBundle})
       : _assetBundle = assetBundle ?? rootBundle;
 
-  static const cheminParDefaut = 'assets/data/correspondances_validees.json';
+  static const cheminParDefaut = 'assets/data/correspondances.json';
 
   final AssetBundle _assetBundle;
 

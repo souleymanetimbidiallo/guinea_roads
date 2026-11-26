@@ -499,6 +499,19 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                               const SizedBox(height: 6),
                               Text(correspondance.instructions),
                             ],
+                            if (correspondance.aConfirmer) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'À confirmer sur le terrain',
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

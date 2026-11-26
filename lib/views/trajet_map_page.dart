@@ -533,7 +533,8 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
                               child: Text(
                                 'Correspondance à ${correspondance.lieu} • '
                                 '${correspondance.dureeMinMinutes}–'
-                                '${correspondance.dureeMaxMinutes} min\n'
+                                '${correspondance.dureeMaxMinutes} min'
+                                '${correspondance.aConfirmer ? ' • à confirmer' : ''}\n'
                                 '${correspondance.instructions}',
                                 style: const TextStyle(
                                   fontSize: 12,

@@ -101,13 +101,13 @@ void main() {
     expect(resultat.nombreChangements, 2);
   });
 
-  test('refuse de calculer une correspondance non validée', () {
-    expect(
-      () => const CalculCorrespondanceService().calculer([
-        _correspondance(id: 'proposition', valideeTerrain: false),
-      ]),
-      throwsA(isA<CorrespondanceNonValideeException>()),
-    );
+  test('compte les correspondances qui restent à confirmer', () {
+    final resultat = const CalculCorrespondanceService().calculer([
+      _correspondance(id: 'proposition', valideeTerrain: false),
+    ]);
+
+    expect(resultat.nombreChangements, 1);
+    expect(resultat.nombreAConfirmer, 1);
   });
 }
 

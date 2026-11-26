@@ -144,9 +144,9 @@ class TrajetController {
     try {
       final loader =
           _correspondanceLoader ?? () => CorrespondanceDataService().charger();
-      correspondances = (await loader())
-          .where((correspondance) => correspondance.valideeTerrain)
-          .toList(growable: false);
+      // Les correspondances non validées sont gardées : le routage les
+      // pénalise et l’interface les signale « à confirmer sur le terrain ».
+      correspondances = await loader();
     } catch (error) {
       correspondances = [];
       debugPrint('Correspondances indisponibles : changements d’axe refusés.');
@@ -481,6 +481,7 @@ class TrajetController {
     final depuis = _slug(axeDepuis);
     final vers = _slug(axeVers);
     final pointId = _slug(point);
+    Correspondance? aConfirmer;
     for (final correspondance in correspondances) {
       final sensDirect = correspondance.axeDepartId == depuis &&
           correspondance.axeArriveeId == vers &&
@@ -491,9 +492,12 @@ class TrajetController {
           correspondance.axeArriveeId == depuis &&
           correspondance.pointDepartId == pointId &&
           correspondance.pointArriveeId == pointId;
-      if (sensDirect || sensInverse) return correspondance;
+      if (!sensDirect && !sensInverse) continue;
+      // Une correspondance validée sur le terrain est toujours préférée.
+      if (correspondance.valideeTerrain) return correspondance;
+      aConfirmer ??= correspondance;
     }
-    return null;
+    return aConfirmer;
   }
 
   Map<String, List<String>> _buildGraph() {

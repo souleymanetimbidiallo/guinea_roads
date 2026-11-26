@@ -6,7 +6,7 @@
     "source": "Points V1 existants à contrôler sur le terrain",
     "points": [
       {"id":"hamdallaye","nom":"Hamdallaye","latitude":9.572402,"longitude":-13.656524,"ordre":0},
-      {"id":"kipe","nom":"Kipé","latitude":9.611226,"longitude":-13.645598,"ordre":1},
+      {"id":"kipe","nom":"Kipé","latitude":9.60512,"longitude":-13.65068,"ordre":1},
       {"id":"lambanyi-ciment","nom":"Lambanyi (Ciment-Guinée)","latitude":9.64364,"longitude":-13.610821,"ordre":2},
       {"id":"uglc","nom":"Université Lansana Conté","latitude":9.6805,"longitude":-13.579675,"ordre":3},
       {"id":"sonfonia-t7","nom":"Sonfonia T7","latitude":9.669334,"longitude":-13.558108,"ordre":4}

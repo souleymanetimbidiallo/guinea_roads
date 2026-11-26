@@ -14,6 +14,10 @@ class Trajet {
     return troncons.fold(0, (total, t) => total + (t.prixParType[type] ?? 0));
   }
 
+  /// Vrai si au moins une correspondance reste à confirmer sur le terrain.
+  bool get correspondancesAConfirmer =>
+      correspondances.any((correspondance) => correspondance.aConfirmer);
+
   int get coutCorrespondances =>
       correspondances.fold(0, (total, item) => total + item.cout);
 
