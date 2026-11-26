@@ -225,12 +225,11 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
 
     final image = await recorder.endRecording().toImage(size, size);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    // Le marqueur est dessiné à la densité de l'écran : on l'indique pour
-    // qu'il garde la même taille qu'avec l'ancien BitmapDescriptor.fromBytes.
-    return BitmapDescriptor.bytes(
-      bytes!.buffer.asUint8List(),
-      imagePixelRatio: pixelRatio,
-    );
+    // BitmapDescriptor.bytes n'est pas encore géré par google_maps_flutter_android
+    // 2.8 (dernière version compatible avec Flutter 3.19) : les marqueurs ne
+    // s'afficheraient pas sur Android. À remplacer après la mise à jour de Flutter.
+    // ignore: deprecated_member_use
+    return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
   }
 
   Future<void> _loadPolylineFromGoogle(List<Stop> stops) async {
