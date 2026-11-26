@@ -1,4 +1,44 @@
-# guinea_roads
+# Guinea Roads
+
+Application mobile Flutter pour se déplacer en transport en commun à Conakry.
+On choisit un arrêt de départ et un arrêt d'arrivée, et l'application compare
+les trajets possibles en taxi, minibus et tricycle : prix, durée estimée selon
+l'heure de départ, changements à faire, puis tracé sur Google Maps.
+
+<p align="center">
+  <img src="docs/screenshots/accueil.webp" width="200" alt="Accueil">
+  <img src="docs/screenshots/resultats.webp" width="200" alt="Résultats de recherche">
+  <img src="docs/screenshots/itineraire.webp" width="200" alt="Détail de l'itinéraire">
+  <img src="docs/screenshots/carte.webp" width="200" alt="Trajet sur la carte">
+</p>
+
+## Fonctionnalités
+
+- Recherche des arrêts par quartier ou par repère.
+- Comparaison des options, triées par prix, durée ou nombre de changements,
+  avec une option recommandée et la raison du choix.
+- Plus court chemin pondéré (Dijkstra) sur un graphe d'axes et de
+  correspondances.
+- Prix par tronçon et par mode de transport.
+- Durée corrigée selon les créneaux de congestion (heures de pointe).
+- Correspondances à pied avec durée et consignes.
+- Tracé routier via Google Routes API, mis en cache 30 minutes.
+- Historique des recherches et trajets favoris, enregistrés sur le téléphone.
+- Données disponibles hors connexion (Firestore hors ligne et fichier JSON de
+  secours).
+
+Les tarifs, durées et créneaux de congestion indiquent s'ils ont été vérifiés
+sur le terrain ou s'ils restent des hypothèses pilotes.
+
+## Stack
+
+Flutter, Dart, Cloud Firestore, Google Maps SDK et Google Routes API.
+
+## Tests
+
+```bash
+flutter test
+```
 
 ## Google Maps et itinéraires
 
@@ -42,18 +82,3 @@ approximative entre les arrêts et indique la cause du refus Google.
 `android/app/google-services.json` configure Firebase. Il ne contient ni la
 clé Maps Android utilisée par le manifeste ni la clé Routes. Ne le remplacez
 que si l'application Android est déplacée vers un autre projet Firebase.
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
