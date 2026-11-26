@@ -37,10 +37,10 @@
     "points": [
       {"id":"port","nom":"Port","latitude":9.515226,"longitude":-13.713946,"ordre":0},
       {"id":"madina","nom":"Madina","latitude":9.545552,"longitude":-13.669683,"ordre":1},
-      {"id":"aeroport","nom":"Aéroport","latitude":9.574932,"longitude":-13.622695,"ordre":2},
+      {"id":"aeroport","nom":"Aéroport","latitude":9.57524,"longitude":-13.62308,"ordre":2},
       {"id":"matoto","nom":"Matoto","latitude":9.611437,"longitude":-13.594349,"ordre":3},
       {"id":"enta","nom":"Enta","latitude":9.641973,"longitude":-13.563614,"ordre":4},
-      {"id":"lansanayah","nom":"Lansanayah","latitude":9.668182,"longitude":-13.524683,"ordre":5},
+      {"id":"lansanayah","nom":"Lansanayah","latitude":9.66845,"longitude":-13.52499,"ordre":5},
       {"id":"km-36","nom":"Km 36","latitude":9.703635,"longitude":-13.498099,"ordre":6}
     ]
   }

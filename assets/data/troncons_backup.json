@@ -37,11 +37,11 @@
     },
     "arrivee": {
       "order": 2,
-      "longitude": -13.622695169731449,
+      "longitude": -13.62308,
       "axe": "Autoroute Fidel Castro",
       "name": "Aéroport",
       "id": "aeroport",
-      "latitude": 9.574932070926799
+      "latitude": 9.57524
     },
     "prixParType": {
       "taxi": 2000,
@@ -54,8 +54,8 @@
     "axe": "Autoroute Fidel Castro",
     "depart": {
       "order": 2,
-      "longitude": -13.622695169731449,
-      "latitude": 9.574932070926799,
+      "longitude": -13.62308,
+      "latitude": 9.57524,
       "id": "aeroport",
       "name": "Aéroport",
       "axe": "Autoroute Fidel Castro"
@@ -112,9 +112,9 @@
     },
     "arrivee": {
       "name": "Lansanayah",
-      "longitude": -13.52468319616884,
+      "longitude": -13.52499,
       "id": "lansanayah",
-      "latitude": 9.668181722981341,
+      "latitude": 9.66845,
       "axe": "Autoroute Fidel Castro",
       "order": 5
     },
@@ -129,9 +129,9 @@
     "axe": "Autoroute Fidel Castro",
     "depart": {
       "name": "Lansanayah",
-      "longitude": -13.52468319616884,
+      "longitude": -13.52499,
       "order": 5,
-      "latitude": 9.668181722981341,
+      "latitude": 9.66845,
       "axe": "Autoroute Fidel Castro",
       "id": "lansanayah"
     },
@@ -453,20 +453,20 @@
     "id": "x7jXyPKt1Ox7go5nw7O8",
     "axe": "Transversale 1",
     "depart": {
-      "longitude": -13.63419,
+      "longitude": -13.63296,
       "id": "gbessia_kondeboungni",
       "name": "Gbessia Kondéboungni",
       "axe": "Transversale 1",
-      "latitude": 9.5668,
+      "latitude": 9.56697,
       "order": 0
     },
     "arrivee": {
       "order": 1,
       "id": "concasseur",
       "axe": "Transversale 1",
-      "longitude": -13.65392,
+      "longitude": -13.65355,
       "name": "Concasseur",
-      "latitude": 9.57605
+      "latitude": 9.57581
     },
     "prixParType": {
       "taxi": 2000,
@@ -479,9 +479,9 @@
     "axe": "Transversale 2",
     "depart": {
       "name": "Aéroport",
-      "longitude": -13.622695169731449,
+      "longitude": -13.62308,
       "id": "aeroport",
-      "latitude": 9.574932070926799,
+      "latitude": 9.57524,
       "order": 0,
       "axe": "Transversale 2"
     },
@@ -630,8 +630,8 @@
     "depart": {
       "id": "kissosso",
       "name": "Kissosso",
-      "latitude": 9.63395,
-      "longitude": -13.57164,
+      "latitude": 9.6343,
+      "longitude": -13.57207,
       "order": 0,
       "axe": "Transversale 5"
     },
@@ -663,8 +663,8 @@
     "arrivee": {
       "id": "kobaya",
       "name": "Kobaya",
-      "latitude": 9.65258,
-      "longitude": -13.59694,
+      "latitude": 9.65254,
+      "longitude": -13.59701,
       "order": 2,
       "axe": "Transversale 5"
     },
@@ -680,8 +680,8 @@
     "depart": {
       "id": "enta",
       "name": "Enta",
-      "latitude": 9.64197341489083,
-      "longitude": -13.563614723225973,
+      "latitude": 9.64334,
+      "longitude": -13.56525,
       "order": 0,
       "axe": "Transversale 6"
     },
@@ -730,8 +730,8 @@
     "depart": {
       "id": "lansanayah",
       "name": "Lansanayah",
-      "latitude": 9.668181722981341,
-      "longitude": -13.52468319616884,
+      "latitude": 9.66845,
+      "longitude": -13.52499,
       "order": 0,
       "axe": "Transversale 9"
     },
@@ -755,8 +755,8 @@
     "depart": {
       "id": "enta_marche",
       "name": "Enta marché",
-      "latitude": 9.64974,
-      "longitude": -13.57192,
+      "latitude": 9.64939,
+      "longitude": -13.57145,
       "order": 0,
       "axe": "Enta marché – Sonfonia"
     },
@@ -780,8 +780,8 @@
     "depart": {
       "id": "sonfonia",
       "name": "Sonfonia",
-      "latitude": 9.66172,
-      "longitude": -13.56178,
+      "latitude": 9.66068,
+      "longitude": -13.56173,
       "order": 0,
       "axe": "Sonfonia – Sonfonia Gare"
     },
@@ -813,8 +813,8 @@
     "arrivee": {
       "id": "kenien",
       "name": "Kénien",
-      "latitude": 9.55286,
-      "longitude": -13.65725,
+      "latitude": 9.55367,
+      "longitude": -13.65665,
       "order": 1,
       "axe": "Madina – Kénien"
     },
@@ -838,8 +838,8 @@
     "arrivee": {
       "id": "concasseur",
       "name": "Concasseur",
-      "latitude": 9.57605,
-      "longitude": -13.65392,
+      "latitude": 9.57581,
+      "longitude": -13.65355,
       "order": 1,
       "axe": "Madina – Concasseur"
     },
