@@ -73,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             top: -90,
             right: -70,
             child: _DecorativeCircle(
@@ -82,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen>
               opacity: 0.06,
             ),
           ),
-          Positioned(
+          const Positioned(
             bottom: -120,
             left: -90,
             child: _DecorativeCircle(

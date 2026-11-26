@@ -11,5 +11,5 @@ void main() async {
     persistenceEnabled: true, // 👉 Active le stockage offline
   );
 
-  runApp(GuineaRoadsApp());
+  runApp(const GuineaRoadsApp());
 }

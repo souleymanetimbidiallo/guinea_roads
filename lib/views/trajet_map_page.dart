@@ -36,8 +36,8 @@ class TrajetMapPage extends StatefulWidget {
     this.corridors = const [],
     this.dureeEstimeeMin,
     this.dureeEstimeeMax,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<TrajetMapPage> createState() => _TrajetMapPageState();
@@ -225,7 +225,12 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
 
     final image = await recorder.endRecording().toImage(size, size);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
+    // Le marqueur est dessiné à la densité de l'écran : on l'indique pour
+    // qu'il garde la même taille qu'avec l'ancien BitmapDescriptor.fromBytes.
+    return BitmapDescriptor.bytes(
+      bytes!.buffer.asUint8List(),
+      imagePixelRatio: pixelRatio,
+    );
   }
 
   Future<void> _loadPolylineFromGoogle(List<Stop> stops) async {
@@ -376,16 +381,16 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
                 widget.arrets.first.latitude, widget.arrets.first.longitude),
             zoom: 13,
           )
-        : CameraPosition(target: LatLng(9.65, -13.60), zoom: 12);
+        : const CameraPosition(target: LatLng(9.65, -13.60), zoom: 12);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: Stack(
         children: [
           GoogleMap(
+            style: _mapStyle,
             onMapCreated: (controller) {
               mapController = controller;
-              controller.setMapStyle(_mapStyle);
               if (trajetBounds != null) {
                 Future<void>.delayed(
                   const Duration(milliseconds: 250),

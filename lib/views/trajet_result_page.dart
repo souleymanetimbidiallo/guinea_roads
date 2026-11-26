@@ -23,11 +23,11 @@ class TrajetResultPage extends StatefulWidget {
     required this.modes,
     this.selectedTrajet,
     this.tarifV2,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
-  _TrajetResultPageState createState() => _TrajetResultPageState();
+  State<TrajetResultPage> createState() => _TrajetResultPageState();
 }
 
 class _TrajetResultPageState extends State<TrajetResultPage> {
@@ -354,15 +354,15 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text('Itinéraire')),
-        body: Center(child: CircularProgressIndicator()),
+        appBar: AppBar(title: const Text('Itinéraire')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (trajet == null) {
       return Scaffold(
-        appBar: AppBar(title: Text('Itinéraire')),
-        body: Center(child: Text('Aucun itinéraire trouvé')),
+        appBar: AppBar(title: const Text('Itinéraire')),
+        body: const Center(child: Text('Aucun itinéraire trouvé')),
       );
     }
 
