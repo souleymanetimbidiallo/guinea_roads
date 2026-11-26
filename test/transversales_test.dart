@@ -76,13 +76,30 @@ void main() {
     expect(injoignables, isEmpty);
   });
 
-  test('applique les tarifs de référence aux nouveaux tronçons', () {
-    final nouveaux = controller.allTroncons.where(
-      (t) => t.axe == 'Transversale 5' || t.axe == 'Madina – Kénien',
-    );
-    for (final troncon in nouveaux) {
-      expect(troncon.prixParType,
-          {'taxi': 2000, 'minibus': 1500, 'tricycle': 2500});
+  test('respecte les modes de transport autorisés par axe', () {
+    const axesPrincipaux = {
+      'Autoroute Fidel Castro',
+      'Le Prince',
+      'Corniche Nord'
+    };
+    const tronconsTricycle = {
+      'Le Prince|Dixinn|Hamdallaye',
+      'Le Prince|Sonfonia T7|Cimenterie',
+      'Le Prince|Cimenterie|Kagbelen',
+    };
+    for (final troncon in controller.allTroncons) {
+      final cle =
+          '${troncon.axe}|${troncon.depart.name}|${troncon.arrivee.name}';
+      final prix = troncon.prixParType;
+      expect(prix['taxi'], 2000, reason: cle);
+
+      final tricycleAutorise =
+          troncon.axe == 'Corniche Nord' || tronconsTricycle.contains(cle);
+      expect(prix['tricycle'], tricycleAutorise ? 2500 : 0, reason: cle);
+
+      if (!axesPrincipaux.contains(troncon.axe)) {
+        expect(prix['minibus'], 0, reason: cle);
+      }
     }
   });
 
