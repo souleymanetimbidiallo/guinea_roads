@@ -11,6 +11,8 @@ import '../services/historique_service.dart';
 import 'trajet_map_page.dart';
 import '../models/correspondance.dart';
 import '../widgets/modes_transport.dart';
+import '../services/partage_trajet.dart';
+import 'package:share_plus/share_plus.dart';
 
 class TrajetResultPage extends StatefulWidget {
   final Stop depart;
@@ -136,35 +138,8 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     );
   }
 
-  /// Découpe le trajet en étapes : une étape par suite de tronçons faits
-  /// avec le même véhicule (même axe, même mode).
-  List<_Etape> _etapes(Trajet trajet) {
-    final etapes = <_Etape>[];
-    for (var i = 0; i < trajet.troncons.length; i++) {
-      final troncon = trajet.troncons[i];
-      final mode = widget.modes[i];
-      final precedente = etapes.isEmpty ? null : etapes.last;
-      if (precedente != null &&
-          precedente.axe == troncon.axe &&
-          precedente.mode == mode) {
-        precedente.troncons.add(troncon);
-      } else {
-        etapes.add(_Etape(troncon.axe, mode, [troncon]));
-      }
-    }
-    // Les correspondances sont dans l’ordre du trajet : une par changement
-    // d’axe.
-    final correspondances = [...trajet.correspondances];
-    for (var k = 1; k < etapes.length; k++) {
-      if (etapes[k].axe != etapes[k - 1].axe && correspondances.isNotEmpty) {
-        etapes[k].correspondanceAvant = correspondances.removeAt(0);
-      }
-    }
-    return etapes;
-  }
-
   List<Widget> _frise(Trajet trajet) {
-    final etapes = _etapes(trajet);
+    final etapes = etapesDuTrajet(trajet, widget.modes);
     final colors = Theme.of(context).colorScheme;
     final widgets = <Widget>[
       _ligneFrise(
@@ -298,7 +273,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                         '${correspondance.libelleType} · '
                         '${correspondance.dureeMinMinutes}–'
                         '${correspondance.dureeMaxMinutes} min · '
-                        '${correspondance.cout == 0 ? 'gratuit' : '${_milliers(correspondance.cout)} GNF'}',
+                        '${correspondance.cout == 0 ? 'gratuit' : '${milliers(correspondance.cout)} GNF'}',
                         style: TextStyle(
                           color: colors.onTertiaryContainer,
                           fontWeight: FontWeight.w700,
@@ -333,7 +308,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     );
   }
 
-  Widget _ligneEtape(_Etape etape) {
+  Widget _ligneEtape(EtapeTrajet etape) {
     final colors = Theme.of(context).colorScheme;
     final mode = ModeTransport.pour(etape.mode);
     final prix = etape.troncons.fold<int>(
@@ -396,7 +371,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
                     Text(
                       [
                         '$nombre tronçon${nombre > 1 ? 's' : ''}',
-                        if (widget.tarifV2 == null) '${_milliers(prix)} GNF',
+                        if (widget.tarifV2 == null) '${milliers(prix)} GNF',
                       ].join(' · '),
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
@@ -417,10 +392,6 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     );
   }
 
-  static String _milliers(int valeur) => valeur
-      .toString()
-      .replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ' ');
-
   Widget _buildModeInfo(int cost) {
     return Card(
       margin: EdgeInsets.zero,
@@ -432,7 +403,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
               child: _summaryMetric(
                 Icons.payments_outlined,
                 'Prix total',
-                '${_milliers(cost)} GNF',
+                '${milliers(cost)} GNF',
               ),
             ),
             Expanded(
@@ -478,6 +449,28 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
           ),
         ),
       ],
+    );
+  }
+
+  String get _libelleDuree => (durationMax - durationMin).abs() < 0.5
+      ? '${duration.toStringAsFixed(0)} min'
+      : '${durationMin.toStringAsFixed(0)}–${durationMax.toStringAsFixed(0)} min';
+
+  Future<void> _partager(int cout) async {
+    final texte = texteDePartage(
+      trajet: trajet!,
+      modes: widget.modes,
+      prixTotal: cout,
+      duree: _libelleDuree,
+      distanceKm: distance,
+      afficherPrixParEtape: widget.tarifV2 == null,
+    );
+    final box = context.findRenderObject() as RenderBox?;
+    await Share.share(
+      texte,
+      subject: 'Trajet ${widget.depart.name} → ${widget.arrivee.name}',
+      sharePositionOrigin:
+          box == null ? null : box.localToGlobal(Offset.zero) & box.size,
     );
   }
 
@@ -529,6 +522,11 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       appBar: AppBar(
         title: const Text('Itinéraire'),
         actions: [
+          IconButton(
+            tooltip: 'Partager le trajet',
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () => _partager(cost),
+          ),
           IconButton(
             onPressed: favoriteLoading ? null : _toggleFavorite,
             tooltip: isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
@@ -652,13 +650,4 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       ),
     );
   }
-}
-
-class _Etape {
-  _Etape(this.axe, this.mode, this.troncons);
-
-  final String axe;
-  final String mode;
-  final List<Troncon> troncons;
-  Correspondance? correspondanceAvant;
 }

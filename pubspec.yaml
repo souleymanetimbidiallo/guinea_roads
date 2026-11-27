@@ -42,6 +42,7 @@ dependencies:
   cloud_firestore: ^5.4.0
   flutter_polyline_points: ^2.0.0
   shared_preferences: ^2.2.2
+  share_plus: ^7.2.2
 
 
 dev_dependencies:
