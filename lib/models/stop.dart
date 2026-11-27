@@ -37,20 +37,32 @@ class Stop {
   }
 
   bool correspondARecherche(String recherche) {
-    final termes = <String>[
-      name,
-      if (name == 'Lambanyi (Ciment-Guinée)') ...[
-        'Lambangni',
-        'Lambanyi ciment',
-        'Ciment Guinée',
-      ],
-    ];
+    final termes = <String>[name, ...?_autresNoms[name]];
     final requete = normaliserPourRecherche(recherche);
     return requete.isEmpty ||
         termes.any(
           (terme) => normaliserPourRecherche(terme).contains(requete),
         );
   }
+
+  /// Autres noms sous lesquels les usagers désignent un arrêt (anciennes
+  /// appellations, noms de la grille officielle des tronçons, repères).
+  static const Map<String, List<String>> _autresNoms = {
+    'Lambanyi (Ciment-Guinée)': [
+      'Lambangni',
+      'Lambanyi ciment',
+      'Ciment Guinée'
+    ],
+    'Sonfonia T7': ['Sonfonia Gare'],
+    'Kipé': ['Centre Émetteur', 'Kipé Centre Émetteur'],
+    'Concasseur': ['Concasseur Hamdallaye'],
+    'Enta': ['Enta carrefour'],
+    'Rond-point T6': ['Carrefour T6', 'T6'],
+    'Nongo Carrefour': ['Nongo Tady', 'Nongo'],
+    'Tanérie': ['Tanènè', 'Tanéné'],
+    'Gbessia Kondéboungni': ['Gbessia', 'Kondéboungni'],
+    'Cité SBK': ['Cité des Bauxites de Kindia'],
+  };
 
   static String normaliserPourRecherche(String valeur) {
     return valeur

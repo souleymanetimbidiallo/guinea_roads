@@ -6,23 +6,16 @@ class PenalitesCorrespondance {
   final int dureeTotaleMaxMinutes;
   final int nombreChangements;
 
+  /// Nombre de correspondances qui restent à confirmer sur le terrain.
+  final int nombreAConfirmer;
+
   const PenalitesCorrespondance({
     required this.coutTotal,
     required this.dureeTotaleMinMinutes,
     required this.dureeTotaleMaxMinutes,
     required this.nombreChangements,
+    this.nombreAConfirmer = 0,
   });
-}
-
-class CorrespondanceNonValideeException implements Exception {
-  final String correspondanceId;
-
-  const CorrespondanceNonValideeException(this.correspondanceId);
-
-  @override
-  String toString() =>
-      'CorrespondanceNonValideeException: $correspondanceId doit être '
-      'validée sur le terrain.';
 }
 
 class CalculCorrespondanceService {
@@ -33,11 +26,10 @@ class CalculCorrespondanceService {
     var dureeTotaleMinMinutes = 0;
     var dureeTotaleMaxMinutes = 0;
     var nombreChangements = 0;
+    var nombreAConfirmer = 0;
 
     for (final correspondance in correspondances) {
-      if (!correspondance.valideeTerrain) {
-        throw CorrespondanceNonValideeException(correspondance.id);
-      }
+      if (correspondance.aConfirmer) nombreAConfirmer++;
       coutTotal += correspondance.cout;
       dureeTotaleMinMinutes += correspondance.dureeMinMinutes;
       dureeTotaleMaxMinutes += correspondance.dureeMaxMinutes;
@@ -49,6 +41,7 @@ class CalculCorrespondanceService {
       dureeTotaleMinMinutes: dureeTotaleMinMinutes,
       dureeTotaleMaxMinutes: dureeTotaleMaxMinutes,
       nombreChangements: nombreChangements,
+      nombreAConfirmer: nombreAConfirmer,
     );
   }
 }

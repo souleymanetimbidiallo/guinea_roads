@@ -322,11 +322,22 @@ class _RecherchePageState extends State<RecherchePage> {
                       'Correspondance à ${correspondance.lieu} • '
                       '${correspondance.libelleType.toLowerCase()} '
                       '${correspondance.dureeMinMinutes}–'
-                      '${correspondance.dureeMaxMinutes} min',
+                      '${correspondance.dureeMaxMinutes} min'
+                      '${correspondance.aConfirmer ? ' • à confirmer' : ''}',
                       style: TextStyle(
                         color: colors.tertiary,
                         fontWeight: FontWeight.w600,
                       ),
+                    ),
+                  ),
+                ],
+                if (option.trajet.correspondancesAConfirmer) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Correspondance à confirmer sur le terrain',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 12,
                     ),
                   ),
                 ],

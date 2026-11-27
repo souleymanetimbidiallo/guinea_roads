@@ -34,6 +34,10 @@ class Correspondance {
   final String sourceValidation;
   final String instructions;
 
+  /// Nom affiché du lieu de correspondance (avec accents). À défaut, il est
+  /// déduit de [pointDepartId].
+  final String? lieuNom;
+
   const Correspondance({
     required this.id,
     required this.axeDepartId,
@@ -48,6 +52,7 @@ class Correspondance {
     this.valideeTerrain = false,
     this.sourceValidation = '',
     this.instructions = '',
+    this.lieuNom,
   })  : assert(dureeMinMinutes >= 0),
         assert(dureeMaxMinutes >= dureeMinMinutes),
         assert(cout >= 0);
@@ -69,10 +74,16 @@ class Correspondance {
       valideeTerrain: json['valideeTerrain'] as bool? ?? false,
       sourceValidation: json['sourceValidation'] as String? ?? '',
       instructions: json['instructions'] as String? ?? '',
+      lieuNom: json['lieu'] as String?,
     );
   }
 
+  /// Vrai tant que la correspondance n’a pas été vérifiée sur place.
+  bool get aConfirmer => !valideeTerrain;
+
   String get lieu {
+    final nom = lieuNom;
+    if (nom != null && nom.trim().isNotEmpty) return nom;
     final mots = pointDepartId.split(RegExp(r'[-_]'));
     return mots
         .where((mot) => mot.isNotEmpty)
