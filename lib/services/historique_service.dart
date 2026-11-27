@@ -26,6 +26,29 @@ class HistoriqueService {
         .toList();
   }
 
+  /// Retire un trajet de l’historique.
+  static Future<void> supprimer(TrajetEnregistre trajet) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trajets = await lireHistorique()
+      ..removeWhere((element) => element.identifiant == trajet.identifiant);
+    await prefs.setStringList(
+      keyHistorique,
+      trajets.map((item) => item.toStorage()).toList(),
+    );
+  }
+
+  /// Remet un trajet supprimé à sa place (pour « Annuler »).
+  static Future<void> remettre(TrajetEnregistre trajet, int position) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trajets = await lireHistorique()
+      ..removeWhere((element) => element.identifiant == trajet.identifiant);
+    trajets.insert(position.clamp(0, trajets.length), trajet);
+    await prefs.setStringList(
+      keyHistorique,
+      trajets.take(nombreMaximum).map((item) => item.toStorage()).toList(),
+    );
+  }
+
   static Future<void> viderHistorique() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(keyHistorique);

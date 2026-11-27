@@ -69,7 +69,7 @@ class AboutPage extends StatelessWidget {
                     'VERSION 1.0.0 • BÊTA',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
                     ),

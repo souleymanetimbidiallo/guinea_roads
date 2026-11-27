@@ -166,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen>
                               'CONAKRY • GUINÉE',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 11,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1,
                               ),

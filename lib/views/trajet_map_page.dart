@@ -536,7 +536,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
                                 '${correspondance.aConfirmer ? ' • à confirmer' : ''}\n'
                                 '${correspondance.instructions}',
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -594,7 +594,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 13,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
@@ -620,7 +620,7 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),

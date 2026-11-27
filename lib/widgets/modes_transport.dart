@@ -38,3 +38,44 @@ class ModeTransport {
         _ => autre,
       };
 }
+
+/// Modes d’un trajet dans l’ordre, sans doublon (« taxi », « minibus »…).
+List<String> modesUniques(List<String> modes) {
+  final uniques = <String>[];
+  for (final mode in modes) {
+    if (!uniques.contains(mode)) uniques.add(mode);
+  }
+  return uniques;
+}
+
+/// Petites icônes colorées des modes d’un trajet. Les lecteurs d’écran
+/// entendent « Taxi + Minibus ». Rien n’est affiché sans mode connu.
+class IconesModes extends StatelessWidget {
+  const IconesModes({super.key, required this.modes, this.taille = 18});
+
+  final List<String> modes;
+  final double taille;
+
+  @override
+  Widget build(BuildContext context) {
+    final uniques = modesUniques(modes);
+    if (uniques.isEmpty) return const SizedBox.shrink();
+    return Semantics(
+      label: uniques.map((m) => ModeTransport.pour(m).libelle).join(' + '),
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (index, mode) in uniques.indexed) ...[
+            if (index > 0) const SizedBox(width: 4),
+            Icon(
+              ModeTransport.pour(mode).icone,
+              size: taille,
+              color: ModeTransport.pour(mode).couleur,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
