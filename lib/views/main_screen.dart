@@ -3,7 +3,6 @@ import 'home_page.dart';
 import 'recherche_page.dart';
 import 'historique_page.dart';
 import 'favoris_page.dart';
-import 'about_page.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -13,24 +12,27 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  static const _indexHistorique = 2;
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const RecherchePage(),
-    const HistoriquePage(),
-    const FavorisPage(),
-    const AboutPage(),
-  ];
+  Widget _page(int index) => switch (index) {
+        0 => HomePage(
+            onVoirHistorique: () =>
+                setState(() => _currentIndex = _indexHistorique),
+          ),
+        1 => const RecherchePage(),
+        2 => const HistoriquePage(),
+        _ => const FavorisPage(),
+      };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: _page(_currentIndex),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         height: 72,
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
         },
@@ -53,11 +55,6 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.star_outline_rounded),
             selectedIcon: Icon(Icons.star_rounded),
             label: 'Favoris',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.info_outline_rounded),
-            selectedIcon: Icon(Icons.info_rounded),
-            label: 'À propos',
           ),
         ],
       ),
