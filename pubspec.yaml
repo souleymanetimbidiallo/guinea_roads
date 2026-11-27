@@ -1,5 +1,5 @@
 name: guinea_roads
-description: "A new Flutter project."
+description: "Itinéraires en transport en commun à Conakry : prix, durée et correspondances."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -38,18 +38,9 @@ dependencies:
   google_maps_flutter: ^2.6.1
   google_maps_flutter_web: ^0.5.7
   http: ^1.2.1
-  json_serializable: ^6.8.0
-  firebase_core: ^2.31.0
-  cloud_firestore: ^4.17.3
+  firebase_core: ^3.4.0
+  cloud_firestore: ^5.4.0
   flutter_polyline_points: ^2.0.0
-  firebase_auth: ^4.8.0
-  google_sign_in: ^5.0.9
-  font_awesome_flutter: ^9.1.0
-  flutter_signin_button: ^2.0.0
-  firebase_storage: ^11.7.7
-  image_picker: 1.0.0
-  flutter_dotenv: ^5.0.2
-  vector_math: ^2.1.4
   shared_preferences: ^2.2.2
 
 

@@ -8,6 +8,13 @@ import '../models/stop.dart';
 import '../models/troncon.dart';
 import '../services/google_directions_service.dart';
 
+/// Formate une fourchette de durée : « 85 min » ou « 85–126 min ».
+String formaterDureeEstimee(double min, double max) {
+  return (max - min).abs() < 0.5
+      ? '${min.toStringAsFixed(0)} min'
+      : '${min.toStringAsFixed(0)}–${max.toStringAsFixed(0)} min';
+}
+
 class TrajetMapPage extends StatefulWidget {
   final List<Stop> arrets;
   final String title;
@@ -15,14 +22,22 @@ class TrajetMapPage extends StatefulWidget {
   final List<Correspondance> correspondances;
   final List<CorridorAxe> corridors;
 
+  /// Durée estimée affichée sur la page d'itinéraire (attente, congestion et
+  /// correspondances comprises). Sans elle, la carte affiche le temps de
+  /// conduite renvoyé par Google Routes.
+  final double? dureeEstimeeMin;
+  final double? dureeEstimeeMax;
+
   const TrajetMapPage({
     required this.arrets,
     required this.title,
     this.tronconModes,
     this.correspondances = const [],
     this.corridors = const [],
-    Key? key,
-  }) : super(key: key);
+    this.dureeEstimeeMin,
+    this.dureeEstimeeMax,
+    super.key,
+  });
 
   @override
   State<TrajetMapPage> createState() => _TrajetMapPageState();
@@ -151,6 +166,11 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
       );
 
   String get _libelleDuree {
+    final estimeeMin = widget.dureeEstimeeMin;
+    final estimeeMax = widget.dureeEstimeeMax;
+    if (estimeeMin != null && estimeeMax != null) {
+      return formaterDureeEstimee(estimeeMin, estimeeMax);
+    }
     if (widget.correspondances.isEmpty) {
       return '${totalDuration.toStringAsFixed(0)} min';
     }
@@ -205,6 +225,10 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
 
     final image = await recorder.endRecording().toImage(size, size);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    // BitmapDescriptor.bytes n'est pas encore géré par google_maps_flutter_android
+    // 2.8 (dernière version compatible avec Flutter 3.19) : les marqueurs ne
+    // s'afficheraient pas sur Android. À remplacer après la mise à jour de Flutter.
+    // ignore: deprecated_member_use
     return BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
   }
 
@@ -356,16 +380,16 @@ class _TrajetMapPageState extends State<TrajetMapPage> {
                 widget.arrets.first.latitude, widget.arrets.first.longitude),
             zoom: 13,
           )
-        : CameraPosition(target: LatLng(9.65, -13.60), zoom: 12);
+        : const CameraPosition(target: LatLng(9.65, -13.60), zoom: 12);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: Stack(
         children: [
           GoogleMap(
+            style: _mapStyle,
             onMapCreated: (controller) {
               mapController = controller;
-              controller.setMapStyle(_mapStyle);
               if (trajetBounds != null) {
                 Future<void>.delayed(
                   const Duration(milliseconds: 250),

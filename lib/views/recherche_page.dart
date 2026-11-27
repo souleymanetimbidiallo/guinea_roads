@@ -606,8 +606,8 @@ class _RecherchePageState extends State<RecherchePage> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text("Rechercher un trajet")),
-        body: Center(child: CircularProgressIndicator()),
+        appBar: AppBar(title: const Text("Rechercher un trajet")),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
