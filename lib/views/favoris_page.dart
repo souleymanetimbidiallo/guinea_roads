@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/trajet_enregistre.dart';
 import '../services/favoris_service.dart';
+import '../widgets/ligne_trajet_enregistre.dart';
 import 'recherche_page.dart';
 
 class FavorisPage extends StatefulWidget {
@@ -31,8 +32,23 @@ class _FavorisPageState extends State<FavorisPage> {
   }
 
   Future<void> _supprimer(TrajetEnregistre trajet) async {
+    setState(() => favoris.remove(trajet));
     await FavorisService.supprimer(trajet.depart, trajet.arrivee);
-    await _chargerFavoris();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Trajet retiré des favoris.'),
+          action: SnackBarAction(
+            label: 'Annuler',
+            onPressed: () async {
+              await FavorisService.ajouter(trajet);
+              await _chargerFavoris();
+            },
+          ),
+        ),
+      );
   }
 
   void _relancer(TrajetEnregistre trajet) {
@@ -50,6 +66,7 @@ class _FavorisPageState extends State<FavorisPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Favoris')),
       body: isLoading
@@ -58,84 +75,69 @@ class _FavorisPageState extends State<FavorisPage> {
               ? _buildEmptyState(context)
               : RefreshIndicator(
                   onRefresh: _chargerFavoris,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: favoris.length,
-                    itemBuilder: (context, index) {
-                      final trajet = favoris[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () => _relancer(trajet),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 46,
-                                    height: 46,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFF2C2),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: const Icon(
-                                      Icons.star_rounded,
-                                      color: Color(0xFFB27A00),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '${trajet.depart} → ${trajet.arrivee}',
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            height: 1.3,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          _modesLabel(trajet.modes),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline_rounded,
-                                    ),
-                                    tooltip: 'Supprimer',
-                                    onPressed: () => _supprimer(trajet),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        child: Text(
+                          'Touchez un favori pour relancer la recherche, '
+                          'glissez-le vers la gauche pour le retirer.',
+                          style: TextStyle(color: colors.onSurfaceVariant),
                         ),
-                      );
-                    },
+                      ),
+                      for (final (index, trajet) in favoris.indexed) ...[
+                        if (index > 0)
+                          Divider(
+                            height: 1,
+                            indent: 56,
+                            color: colors.outlineVariant,
+                          ),
+                        LigneTrajetEnregistre(
+                          trajet: trajet,
+                          favori: true,
+                          detail: trajet.modes.isEmpty
+                              ? 'Touchez pour recalculer'
+                              : libelleModes(trajet.modes),
+                          onTap: () => _relancer(trajet),
+                          onSupprime: () => _supprimer(trajet),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    Widget etape(int numero, IconData icone, String texte) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: colors.primaryContainer,
+                child: Text(
+                  '$numero',
+                  style: TextStyle(
+                    color: colors.onPrimaryContainer,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(icone, color: colors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text(texte, style: const TextStyle(fontSize: 15))),
+            ],
+          ),
+        );
+
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -143,7 +145,7 @@ class _FavorisPageState extends State<FavorisPage> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF2C2),
+                color: const Color(0x33D19B00),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Icon(
@@ -159,10 +161,40 @@ class _FavorisPageState extends State<FavorisPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Ajoutez une étoile depuis le détail d’un itinéraire pour le retrouver ici.',
+              'Gardez vos trajets habituels à portée de main : '
+              'ils apparaîtront ici et sur l’accueil.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              style: TextStyle(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 24),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pour ajouter un favori',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    etape(1, Icons.search_rounded, 'Cherchez un trajet.'),
+                    etape(
+                      2,
+                      Icons.touch_app_outlined,
+                      'Ouvrez l’option qui vous convient.',
+                    ),
+                    etape(
+                      3,
+                      Icons.star_border_rounded,
+                      'Touchez l’étoile en haut de l’itinéraire.',
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -179,14 +211,4 @@ class _FavorisPageState extends State<FavorisPage> {
       ),
     );
   }
-}
-
-String _modesLabel(List<String> modes) {
-  final uniques = <String>[];
-  for (final mode in modes) {
-    if (!uniques.contains(mode)) uniques.add(mode);
-  }
-  return uniques.isEmpty
-      ? 'Touchez pour recalculer'
-      : uniques.map((mode) => mode.toUpperCase()).join(' + ');
 }

@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../models/trajet_enregistre.dart';
 import '../services/historique_service.dart';
+import '../widgets/ligne_trajet_enregistre.dart';
 import 'recherche_page.dart';
 
 class HistoriquePage extends StatefulWidget {
-  const HistoriquePage({super.key});
+  const HistoriquePage({super.key, this.maintenant});
+
+  /// Date de référence pour « Aujourd’hui » et « Hier » (tests).
+  final DateTime Function()? maintenant;
 
   @override
   State<HistoriquePage> createState() => _HistoriquePageState();
@@ -55,6 +59,27 @@ class _HistoriquePageState extends State<HistoriquePage> {
     await _chargerHistorique();
   }
 
+  Future<void> _supprimer(TrajetEnregistre trajet) async {
+    final position = trajets.indexOf(trajet);
+    setState(() => trajets.remove(trajet));
+    await HistoriqueService.supprimer(trajet);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Trajet retiré de l’historique.'),
+          action: SnackBarAction(
+            label: 'Annuler',
+            onPressed: () async {
+              await HistoriqueService.remettre(trajet, position);
+              await _chargerHistorique();
+            },
+          ),
+        ),
+      );
+  }
+
   void _relancer(TrajetEnregistre trajet) {
     Navigator.push(
       context,
@@ -68,14 +93,27 @@ class _HistoriquePageState extends State<HistoriquePage> {
     ).then((_) => _chargerHistorique());
   }
 
+  /// Trajets regroupés par jour, dans l’ordre de l’historique.
+  List<MapEntry<String, List<TrajetEnregistre>>> get _parJour {
+    final maintenant = (widget.maintenant ?? DateTime.now)();
+    final groupes = <String, List<TrajetEnregistre>>{};
+    for (final trajet in trajets) {
+      groupes
+          .putIfAbsent(libelleJour(trajet.enregistreLe, maintenant), () => [])
+          .add(trajet);
+    }
+    return groupes.entries.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Historique'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_forever),
+            icon: const Icon(Icons.delete_sweep_outlined),
             tooltip: 'Vider l’historique',
             onPressed: trajets.isEmpty ? null : _confirmerSuppression,
           ),
@@ -87,90 +125,76 @@ class _HistoriquePageState extends State<HistoriquePage> {
               ? _buildEmptyState(context)
               : RefreshIndicator(
                   onRefresh: _chargerHistorique,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: trajets.length,
-                    itemBuilder: (context, index) {
-                      final trajet = trajets[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () => _relancer(trajet),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  _routeIcon(context, Icons.history_rounded),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          trajet.depart,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 4,
-                                          ),
-                                          child: Icon(
-                                            Icons.arrow_downward_rounded,
-                                            size: 16,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ),
-                                        ),
-                                        Text(
-                                          trajet.arrivee,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          _dateLabel(trajet.enregistreLe),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.chevron_right_rounded),
-                                ],
-                              ),
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                        child: Text(
+                          'Glissez un trajet vers la gauche pour le supprimer.',
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                      ),
+                      for (final groupe in _parJour) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+                          child: Text(
+                            groupe.key,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: colors.primary,
                             ),
                           ),
                         ),
-                      );
-                    },
+                        for (final (index, trajet) in groupe.value.indexed) ...[
+                          if (index > 0)
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color: colors.outlineVariant,
+                            ),
+                          LigneTrajetEnregistre(
+                            trajet: trajet,
+                            detail: [
+                              if (trajet.enregistreLe.millisecondsSinceEpoch >
+                                  0)
+                                _heure(trajet.enregistreLe),
+                              if (trajet.modes.isNotEmpty)
+                                libelleModes(trajet.modes),
+                            ].join(' · '),
+                            onTap: () => _relancer(trajet),
+                            onSupprime: () => _supprimer(trajet),
+                          ),
+                        ],
+                      ],
+                    ],
                   ),
                 ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _routeIcon(context, Icons.history_rounded, size: 64),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                Icons.history_rounded,
+                size: 36,
+                color: colors.onPrimaryContainer,
+              ),
+            ),
             const SizedBox(height: 20),
             const Text(
               'Aucun trajet récent',
@@ -180,9 +204,7 @@ class _HistoriquePageState extends State<HistoriquePage> {
             Text(
               'Les itinéraires que vous consultez apparaîtront ici.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              style: TextStyle(color: colors.onSurfaceVariant),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -198,32 +220,48 @@ class _HistoriquePageState extends State<HistoriquePage> {
       ),
     );
   }
-
-  Widget _routeIcon(
-    BuildContext context,
-    IconData icon, {
-    double size = 46,
-  }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(size / 3),
-      ),
-      child: Icon(
-        icon,
-        color: Theme.of(context).colorScheme.onPrimaryContainer,
-        size: size * 0.5,
-      ),
-    );
-  }
 }
 
-String _dateLabel(DateTime date) {
-  if (date.millisecondsSinceEpoch == 0) return 'Ancien trajet';
+String _heure(DateTime date) {
   final local = date.toLocal();
-  String twoDigits(int value) => value.toString().padLeft(2, '0');
-  return '${twoDigits(local.day)}/${twoDigits(local.month)}/${local.year}'
-      ' à ${twoDigits(local.hour)}:${twoDigits(local.minute)}';
+  return '${local.hour.toString().padLeft(2, '0')}:'
+      '${local.minute.toString().padLeft(2, '0')}';
+}
+
+/// « Aujourd’hui », « Hier », « Lundi 24 novembre »… pour grouper par jour.
+String libelleJour(DateTime date, DateTime maintenant) {
+  if (date.millisecondsSinceEpoch == 0) return 'Plus ancien';
+  const jours = [
+    'Lundi',
+    'Mardi',
+    'Mercredi',
+    'Jeudi',
+    'Vendredi',
+    'Samedi',
+    'Dimanche',
+  ];
+  const mois = [
+    'janvier',
+    'février',
+    'mars',
+    'avril',
+    'mai',
+    'juin',
+    'juillet',
+    'août',
+    'septembre',
+    'octobre',
+    'novembre',
+    'décembre',
+  ];
+  final local = date.toLocal();
+  final jour = DateTime(local.year, local.month, local.day);
+  final aujourdHui =
+      DateTime(maintenant.year, maintenant.month, maintenant.day);
+  final ecart = aujourdHui.difference(jour).inDays;
+  if (ecart == 0) return 'Aujourd’hui';
+  if (ecart == 1) return 'Hier';
+  final numero = local.day == 1 ? '1er' : '${local.day}';
+  final annee = local.year == maintenant.year ? '' : ' ${local.year}';
+  return '${jours[local.weekday - 1]} $numero ${mois[local.month - 1]}$annee';
 }

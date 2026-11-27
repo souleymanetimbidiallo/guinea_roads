@@ -9,6 +9,8 @@ import '../models/trajet_enregistre.dart';
 import '../services/favoris_service.dart';
 import '../services/historique_service.dart';
 import 'trajet_map_page.dart';
+import '../models/correspondance.dart';
+import '../widgets/modes_transport.dart';
 
 class TrajetResultPage extends StatefulWidget {
   final Stop depart;
@@ -134,152 +136,321 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
     );
   }
 
-  List<Widget> _buildTrajetCards(Trajet trajet) {
-    List<Widget> widgets = [];
-    String? currentAxe;
-    List<Widget> currentList = [];
+  /// Découpe le trajet en étapes : une étape par suite de tronçons faits
+  /// avec le même véhicule (même axe, même mode).
+  List<_Etape> _etapes(Trajet trajet) {
+    final etapes = <_Etape>[];
+    for (var i = 0; i < trajet.troncons.length; i++) {
+      final troncon = trajet.troncons[i];
+      final mode = widget.modes[i];
+      final precedente = etapes.isEmpty ? null : etapes.last;
+      if (precedente != null &&
+          precedente.axe == troncon.axe &&
+          precedente.mode == mode) {
+        precedente.troncons.add(troncon);
+      } else {
+        etapes.add(_Etape(troncon.axe, mode, [troncon]));
+      }
+    }
+    // Les correspondances sont dans l’ordre du trajet : une par changement
+    // d’axe.
+    final correspondances = [...trajet.correspondances];
+    for (var k = 1; k < etapes.length; k++) {
+      if (etapes[k].axe != etapes[k - 1].axe && correspondances.isNotEmpty) {
+        etapes[k].correspondanceAvant = correspondances.removeAt(0);
+      }
+    }
+    return etapes;
+  }
 
-    void pushCurrentCard() {
-      if (currentList.isNotEmpty && currentAxe != null) {
+  List<Widget> _frise(Trajet trajet) {
+    final etapes = _etapes(trajet);
+    final colors = Theme.of(context).colorScheme;
+    final widgets = <Widget>[
+      _ligneFrise(
+        marqueur: _point(colors.primary),
+        bas: ModeTransport.pour(etapes.first.mode).couleur,
+        contenu: _noeud(etapes.first.troncons.first.depart.name, 'Départ'),
+      ),
+    ];
+    for (var k = 0; k < etapes.length; k++) {
+      final etape = etapes[k];
+      if (k > 0) {
+        final precedente = etapes[k - 1];
+        final arrivee = precedente.troncons.last.arrivee.name;
+        final reprise = etape.troncons.first.depart.name;
         widgets.add(
-          Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.signpost_rounded,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          currentAxe,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  ...currentList,
-                ],
-              ),
+          _ligneFrise(
+            marqueur: _anneau(colors.onSurface),
+            haut: ModeTransport.pour(precedente.mode).couleur,
+            bas: ModeTransport.pour(etape.mode).couleur,
+            contenu: _noeud(
+              arrivee == reprise ? reprise : '$arrivee → $reprise',
+              'Changement de véhicule',
+              correspondance: etape.correspondanceAvant,
             ),
           ),
         );
       }
-      currentList = [];
+      widgets.add(_ligneEtape(etape));
     }
+    widgets.add(
+      _ligneFrise(
+        marqueur: Icon(Icons.flag_rounded, size: 20, color: colors.primary),
+        haut: ModeTransport.pour(etapes.last.mode).couleur,
+        contenu: _noeud(etapes.last.troncons.last.arrivee.name, 'Arrivée'),
+      ),
+    );
+    return widgets;
+  }
 
-    for (var index = 0; index < trajet.troncons.length; index++) {
-      final troncon = trajet.troncons[index];
-      final mode = widget.modes[index];
-      if (troncon.axe != currentAxe) {
-        pushCurrentCard();
-        currentAxe = troncon.axe;
-      }
-      currentList.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
+  Widget _point(Color couleur) => Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(color: couleur, shape: BoxShape.circle),
+      );
+
+  Widget _anneau(Color couleur) => Container(
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: couleur, width: 3),
+        ),
+      );
+
+  /// Une ligne de la frise : le trait vertical et son repère à gauche,
+  /// le contenu à droite.
+  Widget _ligneFrise({
+    required Widget marqueur,
+    required Widget contenu,
+    Color? haut,
+    Color? bas,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 28,
+            child: Column(
+              children: [
+                Container(
+                  width: 6,
+                  height: 12,
+                  color: haut ?? Colors.transparent,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w800,
-                  ),
+                SizedBox(height: 20, child: Center(child: marqueur)),
+                Expanded(
+                  child: Container(width: 6, color: bas ?? Colors.transparent),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 14),
+              child: contenu,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _noeud(String nom, String role, {Correspondance? correspondance}) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          nom,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        Text(role, style: TextStyle(color: colors.onSurfaceVariant)),
+        if (correspondance != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.tertiaryContainer,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      '${troncon.depart.name} → ${troncon.arrivee.name}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    Icon(
+                      correspondance.type == TypeCorrespondance.marche
+                          ? Icons.directions_walk_rounded
+                          : Icons.local_taxi_rounded,
+                      size: 20,
+                      color: colors.onTertiaryContainer,
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '${troncon.prixParType[mode]} GNF',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${correspondance.libelleType} · '
+                        '${correspondance.dureeMinMinutes}–'
+                        '${correspondance.dureeMaxMinutes} min · '
+                        '${correspondance.cout == 0 ? 'gratuit' : '${_milliers(correspondance.cout)} GNF'}',
+                        style: TextStyle(
+                          color: colors.onTertiaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              _modeChip(mode),
-            ],
-          ),
-        ),
-      );
-    }
-    pushCurrentCard();
-    return widgets;
-  }
-
-  Widget _buildModeInfo(List<String> modes, int cost) {
-    final modesUtilises = <String>[];
-    for (final mode in modes) {
-      if (!modesUtilises.contains(mode)) modesUtilises.add(mode);
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _summaryMetric(
-                    Icons.payments_outlined,
-                    'Prix total',
-                    '$cost GNF',
+                if (correspondance.instructions.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    correspondance.instructions,
+                    style: TextStyle(color: colors.onTertiaryContainer),
                   ),
-                ),
-                Expanded(
-                  child: _summaryMetric(
-                    Icons.route_rounded,
-                    'Distance',
-                    '${distance.toStringAsFixed(1)} km',
+                ],
+                if (correspondance.aConfirmer) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'À confirmer sur le terrain',
+                    style: TextStyle(
+                      color: colors.onTertiaryContainer,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _summaryMetric(
-                    Icons.schedule_rounded,
-                    'Durée',
-                    (durationMax - durationMin).abs() < 0.5
-                        ? '${duration.toStringAsFixed(0)} min'
-                        : '${durationMin.toStringAsFixed(0)}–'
-                            '${durationMax.toStringAsFixed(0)} min',
-                  ),
-                ),
+                ],
               ],
             ),
-            const Divider(height: 28),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: modesUtilises.map(_modeChip).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _ligneEtape(_Etape etape) {
+    final colors = Theme.of(context).colorScheme;
+    final mode = ModeTransport.pour(etape.mode);
+    final prix = etape.troncons.fold<int>(
+      0,
+      (total, troncon) => total + (troncon.prixParType[etape.mode] ?? 0),
+    );
+    final nombre = etape.troncons.length;
+    final arrets = [
+      for (var i = 0; i < etape.troncons.length - 1; i++)
+        etape.troncons[i].arrivee.name,
+    ];
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 28,
+            child: Center(child: Container(width: 6, color: mode.couleur)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(mode.icone, color: mode.couleur, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              text: mode.libelle,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: ' · ${etape.axe}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      [
+                        '$nombre tronçon${nombre > 1 ? 's' : ''}',
+                        if (widget.tarifV2 == null) '${_milliers(prix)} GNF',
+                      ].join(' · '),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    if (arrets.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Arrêts : ${arrets.join(' · ')}',
+                        style: TextStyle(color: colors.onSurfaceVariant),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _milliers(int valeur) => valeur
+      .toString()
+      .replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ' ');
+
+  Widget _buildModeInfo(int cost) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Expanded(
+              child: _summaryMetric(
+                Icons.payments_outlined,
+                'Prix total',
+                '${_milliers(cost)} GNF',
+              ),
+            ),
+            Expanded(
+              child: _summaryMetric(
+                Icons.route_rounded,
+                'Distance',
+                '${distance.toStringAsFixed(1)} km',
+              ),
+            ),
+            Expanded(
+              child: _summaryMetric(
+                Icons.schedule_rounded,
+                'Durée',
+                (durationMax - durationMin).abs() < 0.5
+                    ? '${duration.toStringAsFixed(0)} min'
+                    : '${durationMin.toStringAsFixed(0)}–'
+                        '${durationMax.toStringAsFixed(0)} min',
+              ),
             ),
           ],
         ),
@@ -295,49 +466,18 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         Text(
           value,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 2),
         Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 13,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],
-    );
-  }
-
-  Widget _modeChip(String mode) {
-    final (icon, color) = switch (mode) {
-      'taxi' => (Icons.local_taxi_rounded, const Color(0xFFD19B00)),
-      'minibus' => (Icons.directions_bus_rounded, const Color(0xFF2474C6)),
-      'tricycle' => (Icons.electric_rickshaw_rounded, const Color(0xFF168A45)),
-      _ => (Icons.directions_rounded, Colors.grey),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 5),
-          Text(
-            mode.toUpperCase(),
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -373,6 +513,17 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
       tarifV2: widget.tarifV2,
     );
     final cost = option.coutTotal;
+    final mentions = [
+      if (!profilsValidesTerrain)
+        'Durée calculée avec des coefficients pilotes, à valider sur le '
+            'terrain.',
+      if (congestionPiloteAppliquee && !congestionValideeTerrain)
+        'Effet des heures de pointe estimé : hypothèse pilote.',
+      if (widget.tarifV2 != null)
+        'Tarif pilote par tranches : ${widget.tarifV2!.nombreTranches} '
+            'tranche${widget.tarifV2!.nombreTranches > 1 ? 's' : ''} '
+            'facturée${widget.tarifV2!.nombreTranches > 1 ? 's' : ''}.',
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -392,7 +543,7 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Text(
             widget.depart.name,
@@ -428,96 +579,33 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
             ),
           ),
           const SizedBox(height: 18),
-          _buildModeInfo(widget.modes, cost),
-          if (!profilsValidesTerrain)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Durée pilote • coefficients à valider sur le terrain',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+          _buildModeInfo(cost),
+          if (mentions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(14),
               ),
-            ),
-          if (congestionPiloteAppliquee && !congestionValideeTerrain)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Congestion estimée selon le créneau actuel'
-                ' • hypothèse à valider sur le terrain',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          if (widget.tarifV2 != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Tarif pilote V2 • ${widget.tarifV2!.nombreTranches} tranche'
-              '${widget.tarifV2!.nombreTranches > 1 ? 's' : ''} facturée'
-              '${widget.tarifV2!.nombreTranches > 1 ? 's' : ''}',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.tertiary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-          if (trajet!.correspondances.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            ...trajet!.correspondances.map(
-              (correspondance) => Card(
-                color: Theme.of(context).colorScheme.tertiaryContainer,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.directions_walk_rounded,
-                        color:
-                            Theme.of(context).colorScheme.onTertiaryContainer,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Correspondance à ${correspondance.lieu}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${correspondance.libelleType} • '
-                              '${correspondance.dureeMinMinutes}–'
-                              '${correspondance.dureeMaxMinutes} min'
-                              '${correspondance.cout == 0 ? ' • gratuite' : ' • ${correspondance.cout} GNF'}',
-                            ),
-                            if (correspondance.instructions.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(correspondance.instructions),
-                            ],
-                            if (correspondance.aConfirmer) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                'À confirmer sur le terrain',
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      mentions.join('\n'),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -526,32 +614,51 @@ class _TrajetResultPageState extends State<TrajetResultPage> {
             'Étapes du trajet',
             style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 12),
-          ..._buildTrajetCards(trajet!),
+          const SizedBox(height: 8),
+          ..._frise(trajet!),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.map_rounded),
-        label: const Text('Voir sur la carte'),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TrajetMapPage(
-                arrets: trajet!.troncons
-                    .map((t) => t.depart)
-                    .followedBy([trajet!.troncons.last.arrivee]).toList(),
-                title: '${widget.depart.name} → ${widget.arrivee.name}',
-                tronconModes: _buildTronconModes(),
-                correspondances: trajet!.correspondances,
-                corridors: controller.corridors,
-                dureeEstimeeMin: durationMin,
-                dureeEstimeeMax: durationMax,
-              ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: FilledButton.icon(
+          icon: const Icon(Icons.map_rounded),
+          label: const Text('Voir sur la carte'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
             ),
-          );
-        },
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TrajetMapPage(
+                  arrets: trajet!.troncons
+                      .map((t) => t.depart)
+                      .followedBy([trajet!.troncons.last.arrivee]).toList(),
+                  title: '${widget.depart.name} → ${widget.arrivee.name}',
+                  tronconModes: _buildTronconModes(),
+                  correspondances: trajet!.correspondances,
+                  corridors: controller.corridors,
+                  dureeEstimeeMin: durationMin,
+                  dureeEstimeeMax: durationMax,
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+class _Etape {
+  _Etape(this.axe, this.mode, this.troncons);
+
+  final String axe;
+  final String mode;
+  final List<Troncon> troncons;
+  Correspondance? correspondanceAvant;
 }

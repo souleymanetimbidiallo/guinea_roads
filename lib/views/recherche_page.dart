@@ -154,7 +154,7 @@ class _RecherchePageState extends State<RecherchePage> {
                                 badge,
                                 style: TextStyle(
                                   color: colors.onPrimaryContainer,
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
