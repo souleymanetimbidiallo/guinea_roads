@@ -47,6 +47,10 @@ void main() {
 
   testWidgets('groupe l’historique par jour en lignes compactes',
       (tester) async {
+    final semantique = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(1080, 4200);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({
       HistoriqueService.keyHistorique: [
         _trajet('Aéroport', 'Madina', DateTime(2026, 11, 26, 9, 5)).toStorage(),
@@ -61,13 +65,16 @@ void main() {
     expect(find.text('Aujourd’hui'), findsOneWidget);
     expect(find.text('Hier'), findsOneWidget);
     expect(find.text('Aéroport → Madina'), findsOneWidget);
-    expect(find.text('09:05 · Taxi + Minibus'), findsOneWidget);
+    expect(find.text('09:05'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'Taxi \+ Minibus')), findsNWidgets(2));
+    expect(find.byIcon(Icons.local_taxi_rounded), findsNWidgets(2));
 
     await tester.drag(find.text('Bambeto → Cosa'), const Offset(-500, 0));
     await tester.pumpAndSettle();
     expect(find.text('Bambeto → Cosa'), findsNothing);
     expect(find.text('Trajet retiré de l’historique.'), findsOneWidget);
     expect((await HistoriqueService.lireHistorique()), hasLength(1));
+    semantique.dispose();
   });
 
   testWidgets('explique comment ajouter un favori', (tester) async {

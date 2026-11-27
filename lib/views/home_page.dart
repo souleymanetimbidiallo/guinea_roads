@@ -332,10 +332,6 @@ class _HomePageState extends State<HomePage> {
       if (recent.favori) 'Favori',
       if (!recent.favori && trajet.enregistreLe.year > 1970)
         _date(trajet.enregistreLe),
-      if (trajet.modes.isNotEmpty)
-        trajet.modes.map((m) => ModeTransport.pour(m).libelle).toSet().join(
-              ' + ',
-            ),
     ].join(' · ');
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
@@ -359,7 +355,22 @@ class _HomePageState extends State<HomePage> {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
-      subtitle: details.isEmpty ? null : Text(details),
+      subtitle: trajet.modes.isEmpty && details.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  IconesModes(modes: trajet.modes),
+                  if (trajet.modes.isNotEmpty && details.isNotEmpty)
+                    const SizedBox(width: 8),
+                  if (details.isNotEmpty)
+                    Flexible(
+                      child: Text(details, overflow: TextOverflow.ellipsis),
+                    ),
+                ],
+              ),
+            ),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: () => _rechercher(de: trajet.depart, vers: trajet.arrivee),
     );

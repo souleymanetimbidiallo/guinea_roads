@@ -156,13 +156,10 @@ class _HistoriquePageState extends State<HistoriquePage> {
                             ),
                           LigneTrajetEnregistre(
                             trajet: trajet,
-                            detail: [
-                              if (trajet.enregistreLe.millisecondsSinceEpoch >
-                                  0)
-                                _heure(trajet.enregistreLe),
-                              if (trajet.modes.isNotEmpty)
-                                libelleModes(trajet.modes),
-                            ].join(' · '),
+                            detail:
+                                trajet.enregistreLe.millisecondsSinceEpoch > 0
+                                    ? _heure(trajet.enregistreLe)
+                                    : null,
                             onTap: () => _relancer(trajet),
                             onSupprime: () => _supprimer(trajet),
                           ),

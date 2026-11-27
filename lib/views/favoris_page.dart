@@ -96,9 +96,6 @@ class _FavorisPageState extends State<FavorisPage> {
                         LigneTrajetEnregistre(
                           trajet: trajet,
                           favori: true,
-                          detail: trajet.modes.isEmpty
-                              ? 'Touchez pour recalculer'
-                              : libelleModes(trajet.modes),
                           onTap: () => _relancer(trajet),
                           onSupprime: () => _supprimer(trajet),
                         ),

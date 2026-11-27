@@ -256,13 +256,10 @@ class _RecherchePageState extends State<RecherchePage> {
                                 style:
                                     TextStyle(color: colors.onSurfaceVariant),
                               ),
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: ModeTransport.pour(mode).couleur,
-                                shape: BoxShape.circle,
-                              ),
+                            Icon(
+                              ModeTransport.pour(mode).icone,
+                              size: 18,
+                              color: ModeTransport.pour(mode).couleur,
                             ),
                             Text(
                               ModeTransport.pour(mode).libelle,

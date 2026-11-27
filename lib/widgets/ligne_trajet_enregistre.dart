@@ -9,14 +9,16 @@ class LigneTrajetEnregistre extends StatelessWidget {
   const LigneTrajetEnregistre({
     super.key,
     required this.trajet,
-    required this.detail,
+    this.detail,
     required this.onTap,
     required this.onSupprime,
     this.favori = false,
   });
 
   final TrajetEnregistre trajet;
-  final String detail;
+
+  /// Texte après les icônes des modes (heure, « Favori »…).
+  final String? detail;
   final VoidCallback onTap;
   final VoidCallback onSupprime;
   final bool favori;
@@ -60,19 +62,24 @@ class LigneTrajetEnregistre extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(detail),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              IconesModes(modes: trajet.modes),
+              if (trajet.modes.isNotEmpty && (detail ?? '').isNotEmpty) ...[
+                const SizedBox(width: 8),
+              ],
+              if ((detail ?? '').isNotEmpty)
+                Flexible(child: Text(detail!, overflow: TextOverflow.ellipsis)),
+              if (trajet.modes.isEmpty && (detail ?? '').isEmpty)
+                const Text('Touchez pour recalculer'),
+            ],
+          ),
+        ),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
       ),
     );
   }
-}
-
-/// Modes d’un trajet enregistré, dans l’ordre et sans doublon.
-String libelleModes(List<String> modes) {
-  final uniques = <String>[];
-  for (final mode in modes) {
-    if (!uniques.contains(mode)) uniques.add(mode);
-  }
-  return uniques.map((mode) => ModeTransport.pour(mode).libelle).join(' + ');
 }
