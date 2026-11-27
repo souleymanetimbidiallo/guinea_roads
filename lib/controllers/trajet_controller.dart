@@ -580,6 +580,30 @@ class TrajetController {
     return results;
   }
 
+  /// Axes qui desservent un arrêt (pour l’aide à la saisie).
+  Set<String> axesPourArret(Stop stop) {
+    final nom = Stop.normaliserPourRecherche(stop.name);
+    final axes = <String>{};
+    for (final troncon in allTroncons) {
+      if (Stop.normaliserPourRecherche(troncon.depart.name) == nom ||
+          Stop.normaliserPourRecherche(troncon.arrivee.name) == nom) {
+        axes.add(troncon.axe);
+      }
+    }
+    if (axes.isEmpty && stop.axe.trim().isNotEmpty) axes.add(stop.axe);
+    return axes;
+  }
+
+  /// Vrai si l’arrêt est un lieu de correspondance entre deux axes.
+  bool estPointDeCorrespondance(Stop stop) {
+    final id = _slug(stop.name);
+    return correspondances.any(
+      (correspondance) =>
+          correspondance.pointDepartId == id ||
+          correspondance.pointArriveeId == id,
+    );
+  }
+
   List<Stop> extractAllStops() {
     final stopsSet = <String, Stop>{};
     for (var troncon in allTroncons) {
